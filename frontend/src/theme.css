@@ -1,0 +1,109 @@
+/* ---------- Evento design system ---------- */
+:root {
+    --color-primary: #5b21b6;
+    --color-primary-dark: #4527a0;
+    --color-primary-light: #7c3aed;
+    --color-accent: #f5a524;
+    --color-accent-dark: #d98c0f;
+    --color-bg: #faf9fc;
+    --color-surface: #ffffff;
+    --color-text: #241b3a;
+    --color-text-muted: #6b6480;
+    --color-border: #e6e1f0;
+
+    --font-heading: 'Playfair Display', Georgia, serif;
+    --font-body: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --shadow-sm: 0 2px 8px rgba(36, 27, 58, 0.08);
+    --shadow-md: 0 8px 24px rgba(36, 27, 58, 0.12);
+    --shadow-lg: 0 16px 40px rgba(36, 27, 58, 0.18);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+}
+
+h1, h2, h3 {
+    font-family: var(--font-heading);
+}
+
+a {
+    color: var(--color-primary);
+}
+
+/* Brand the Bootstrap buttons the rest of the app already uses,
+   instead of maintaining a parallel set of custom button classes. */
+.btn-primary {
+    --bs-btn-bg: var(--color-primary);
+    --bs-btn-border-color: var(--color-primary);
+    --bs-btn-hover-bg: var(--color-primary-dark);
+    --bs-btn-hover-border-color: var(--color-primary-dark);
+    --bs-btn-active-bg: var(--color-primary-dark);
+    --bs-btn-active-border-color: var(--color-primary-dark);
+    --bs-btn-disabled-bg: var(--color-primary);
+    --bs-btn-disabled-border-color: var(--color-primary);
+}
+
+.btn-secondary {
+    --bs-btn-bg: transparent;
+    --bs-btn-color: var(--color-primary);
+    --bs-btn-border-color: var(--color-primary);
+    --bs-btn-hover-bg: var(--color-primary);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-border-color: var(--color-primary);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--color-primary);
+    --bs-btn-border-color: var(--color-primary);
+    --bs-btn-hover-bg: var(--color-primary);
+    --bs-btn-hover-border-color: var(--color-primary);
+}
+
+.text-primary {
+    color: var(--color-primary) !important;
+}
+
+/* Shared full-height gradient background used by every auth page
+   (Login, Register, Forgot/Reset Password) so they look like one system. */
+.auth-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--color-primary) 0%, #7c3aed 45%, var(--color-accent) 130%);
+    padding: 20px;
+}
+
+.auth-card {
+    background: var(--color-surface);
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 420px;
+}
+
+.auth-card h2 {
+    color: var(--color-primary);
+}
+
+/* For logged-in-only pages that still want the same centered card look,
+   but keep the Header visible above (unlike the full auth-page gradient). */
+.page-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    min-height: 70vh;
+    padding: 20px;
+}

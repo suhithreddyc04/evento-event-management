@@ -1,0 +1,112 @@
+.box-section {
+    margin: 32px auto;
+    max-width: 1100px;
+    padding: 3rem;
+    background-color: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.content h1 {
+    flex: 1;
+    font-size: 2.75rem;
+    color: var(--color-text);
+    line-height: 1.35;
+    font-weight: 700;
+    text-align: left;
+    margin: 0;
+}
+
+.content h1 .highlight {
+    color: var(--color-primary);
+    font-style: italic;
+}
+
+.image-gallery {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    flex: 1;
+}
+
+.image-gallery img {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.description {
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: 1.15rem;
+    color: var(--color-text-muted);
+    line-height: 1.8;
+    text-align: left;
+    margin-top: 28px;
+    padding: 0;
+}
+
+.description strong {
+    color: var(--color-primary);
+}
+
+@media (max-width: 768px) {
+    .content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1.5rem;
+    }
+
+    .content h1 {
+        font-size: 2rem;
+        text-align: center;
+    }
+
+    .image-gallery {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .description {
+        text-align: center;
+    }
+}
+
+.explore-button {
+    margin-top: 24px;
+    padding: 14px 32px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(120deg, var(--color-accent) 0%, var(--color-accent-dark) 100%);
+    border: none;
+    border-radius: 30px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.explore-button:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: var(--shadow-md);
+}
+
+.explore {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 1.5rem;
+}

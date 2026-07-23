@@ -1,0 +1,54 @@
+html, body {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.main-content {
+    flex: 1;
+}
+
+/* Page-load fade/slide-in, applied to the main sections of every page */
+@keyframes fade-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.box-section,
+.events-categories-section,
+.events-section,
+.event-details,
+.my-bookings-section,
+.admin-section {
+    animation: fade-slide-up 0.5s ease-out;
+}
+
+/* Zoom-on-hover for the Home page image gallery */
+.image-gallery img {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.image-gallery img:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+}
+
+/* Consistent button hover lift across the app */
+.btn:hover,
+.header-button:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease;
+}

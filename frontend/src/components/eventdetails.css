@@ -1,0 +1,133 @@
+.event-details {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.event-details h1 {
+  font-size: 2.5rem;
+  margin-bottom: 8px;
+  color: var(--color-primary);
+}
+
+.event-details > p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  margin-bottom: 20px;
+}
+
+.event-details h3 {
+  font-size: 1.3rem;
+  margin-bottom: 10px;
+  color: var(--color-text);
+}
+
+.capacity-note {
+  font-weight: 600;
+  color: var(--color-accent-dark);
+  margin-bottom: 12px;
+}
+
+.event-activities, .event-decorations, .event-games {
+  margin-top: 24px;
+  text-align: left;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+}
+
+.event-activities h3, .event-decorations h3, .event-games h3 {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+  color: var(--color-primary);
+}
+
+.event-activities p, .event-decorations p, .event-games p {
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.event-details .event-image {
+  width: 100%;
+  max-height: 380px;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-md);
+}
+
+.book-form-container {
+  margin-top: 32px;
+  padding: 24px;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+}
+
+.book-form-container h3 {
+  color: var(--color-primary);
+  text-align: center;
+}
+
+.booking-as {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  margin-bottom: 16px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  margin-top: 5px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  font-size: 1rem;
+  font-family: var(--font-body);
+}
+
+.form-group textarea {
+  resize: vertical;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.15);
+}
+
+.booking-error {
+  color: #d9534f;
+  font-weight: 500;
+}
+
+.back-link {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 0.95rem;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
