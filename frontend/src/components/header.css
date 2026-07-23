@@ -91,6 +91,65 @@
     outline: none;
 }
 
+.header-profile {
+    position: relative;
+}
+
+.header-profile-toggle {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.6rem;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s ease;
+}
+
+.header-profile-toggle:hover,
+.header-profile-toggle:focus {
+    color: #fff;
+    outline: none;
+}
+
+.header-profile-menu {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    min-width: 180px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    z-index: 200;
+}
+
+.header-profile-item {
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-text);
+    text-decoration: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.header-profile-item:hover,
+.header-profile-item:focus {
+    background-color: var(--color-bg);
+    color: var(--color-primary);
+    outline: none;
+}
+
 @media (max-width: 768px) {
     .header {
         flex-direction: column;

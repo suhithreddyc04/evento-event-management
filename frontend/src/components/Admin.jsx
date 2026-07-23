@@ -4,6 +4,8 @@ import Header from './header.jsx';
 import api from '../api';
 import { useAuth } from '../AuthContext';
 import { useToast } from '../ToastContext';
+import AdminAnalytics from './AdminAnalytics.jsx';
+import LocationAutocomplete from './LocationAutocomplete.jsx';
 import './admin.css';
 
 const emptyForm = {
@@ -11,6 +13,7 @@ const emptyForm = {
     description: '',
     imageUrl: '',
     category: 'wedding',
+    location: '',
     details: '',
     activities: '',
     decorations: '',
@@ -28,11 +31,12 @@ const Admin = () => {
     const [editingId, setEditingId] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [activeTab, setActiveTab] = useState('events');
 
     const loadEvents = () => {
         setLoading(true);
-        api.get('/events')
-            .then(response => setEvents(response.data))
+        api.get('/events', { params: { limit: 1000 } })
+            .then(response => setEvents(response.data.events))
             .catch(() => toast.error('Could not load events.'))
             .finally(() => setLoading(false));
     };
@@ -57,6 +61,7 @@ const Admin = () => {
             description: event.description || '',
             imageUrl: event.imageUrl || '',
             category: event.category || 'wedding',
+            location: event.location || '',
             details: event.details || '',
             activities: event.activities || '',
             decorations: event.decorations || '',
@@ -122,8 +127,29 @@ const Admin = () => {
         <div>
             <Header />
             <section className="admin-section">
-                <h1>Admin: Manage Events</h1>
+                <h1>Admin</h1>
 
+                <div className="admin-tabs">
+                    <button
+                        type="button"
+                        className={`admin-tab-button ${activeTab === 'events' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('events')}
+                    >
+                        Manage Events
+                    </button>
+                    <button
+                        type="button"
+                        className={`admin-tab-button ${activeTab === 'analytics' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('analytics')}
+                    >
+                        Analytics
+                    </button>
+                </div>
+
+                {activeTab === 'analytics' ? (
+                    <AdminAnalytics />
+                ) : (
+                    <>
                 <form onSubmit={handleSubmit} className="admin-form">
                     <h2>{editingId ? 'Edit Event' : 'Add New Event'}</h2>
 
@@ -166,6 +192,14 @@ const Admin = () => {
                         <div className="mb-3">
                             <label className="form-label">Capacity (blank = unlimited)</label>
                             <input className="form-control" name="capacity" type="number" min="0" value={form.capacity} onChange={handleChange} />
+                        </div>
+                        <div className="mb-3">
+                            <label className="form-label">Location</label>
+                            <LocationAutocomplete
+                                value={form.location}
+                                onChange={(value) => setForm((current) => ({ ...current, location: value }))}
+                                placeholder="e.g. Taj Lands End, Mumbai"
+                            />
                         </div>
                     </div>
 
@@ -231,6 +265,8 @@ const Admin = () => {
                             </tbody>
                         </table>
                     </div>
+                )}
+                    </>
                 )}
             </section>
         </div>

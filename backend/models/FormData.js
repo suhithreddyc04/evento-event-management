@@ -5,7 +5,9 @@ const FormDataSchema = new mongoose.Schema({
     email: String,
     password: String,
     googleId: String,
+    avatarUrl: String,
     isAdmin: { type: Boolean, default: false },
+    favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event' }],
     resetPasswordToken: String,
     resetPasswordExpires: Date,
 })

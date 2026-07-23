@@ -14,6 +14,7 @@ const { OAuth2Client } = require('google-auth-library');
 const FormDataModel = require('./models/FormData');
 const EventModel = require('./models/Event');
 const BookingModel = require('./models/Booking');
+const ReviewModel = require('./models/Review');
 const { sendResetPasswordEmail, sendBookingConfirmationEmail } = require('./mailer');
 
 dotenv.config();
@@ -58,7 +59,11 @@ mongoose.connect(process.env.MONGO_URI)
   .catch((err) => console.log('MongoDB connection error:', err));
 
 const signToken = (user) =>
-    jwt.sign({ id: user._id, email: user.email, isAdmin: !!user.isAdmin }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    jwt.sign(
+        { id: user._id, email: user.email, isAdmin: !!user.isAdmin, hasPassword: !!user.password },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+    );
 
 const requireAuth = (req, res, next) => {
     const authHeader = req.headers.authorization || '';
@@ -75,11 +80,30 @@ const requireAuth = (req, res, next) => {
     });
 };
 
+const optionalAuth = (req, res, next) => {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+    if (!token) return next();
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (!err) req.user = decoded;
+        next();
+    });
+};
+
 const requireAdmin = (req, res, next) => {
     if (!req.user.isAdmin) {
         return res.status(403).json({ message: 'Admin access required' });
     }
     next();
+};
+
+const getFavoriteIdSet = (userId) => {
+    if (!userId) return Promise.resolve(new Set());
+
+    return FormDataModel.findById(userId).select('favorites')
+        .then(user => new Set((user?.favorites || []).map((id) => id.toString())));
 };
 
 const authLimiter = rateLimit({
@@ -269,40 +293,185 @@ app.post('/reset-password/:token', (req, res) => {
 
 // Events
 
-app.get('/events', (req, res) => {
-    const filter = {};
+const EVENT_SORTS = {
+    rating: { avgRating: -1, reviewCount: -1 },
+    bookings: { bookedCount: -1 },
+    newest: { _id: -1 },
+};
+
+app.get('/events', optionalAuth, (req, res) => {
+    const match = {};
 
     if (req.query.category) {
-        filter.category = req.query.category;
+        match.category = req.query.category;
     }
 
     if (req.query.search) {
         const escaped = req.query.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(escaped, 'i');
-        filter.$or = [{ name: regex }, { description: regex }];
+        match.$or = [{ name: regex }, { description: regex }];
     }
 
-    EventModel.find(filter)
-        .then(events => res.status(200).json(events))
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 12, 1), 50);
+    const skip = (page - 1) * limit;
+    const minRating = req.query.minRating ? Number(req.query.minRating) : null;
+    const sortStage = EVENT_SORTS[req.query.sort] || { _id: 1 };
+
+    const pipeline = [
+        { $match: match },
+        {
+            $lookup: {
+                from: 'reviews',
+                localField: '_id',
+                foreignField: 'event',
+                as: 'reviewDocs',
+            },
+        },
+        {
+            $lookup: {
+                from: 'bookings',
+                localField: '_id',
+                foreignField: 'event',
+                as: 'bookingDocs',
+            },
+        },
+        {
+            $addFields: {
+                avgRating: {
+                    $cond: [
+                        { $gt: [{ $size: '$reviewDocs' }, 0] },
+                        { $round: [{ $avg: '$reviewDocs.rating' }, 1] },
+                        null,
+                    ],
+                },
+                reviewCount: { $size: '$reviewDocs' },
+                bookedCount: { $size: '$bookingDocs' },
+            },
+        },
+    ];
+
+    if (minRating) {
+        pipeline.push({ $match: { avgRating: { $gte: minRating } } });
+    }
+
+    pipeline.push({
+        $facet: {
+            data: [
+                { $sort: sortStage },
+                { $skip: skip },
+                { $limit: limit },
+                { $project: { reviewDocs: 0, bookingDocs: 0 } },
+            ],
+            totalCount: [{ $count: 'count' }],
+        },
+    });
+
+    EventModel.aggregate(pipeline)
+        .then(([result]) => {
+            const events = result.data;
+            const total = result.totalCount[0]?.count || 0;
+
+            return getFavoriteIdSet(req.user?.id).then(favoriteIds => {
+                const withFavorites = events.map((event) => ({
+                    ...event,
+                    isFavorited: favoriteIds.has(event._id.toString()),
+                }));
+                res.status(200).json({
+                    events: withFavorites,
+                    total,
+                    page,
+                    hasMore: skip + withFavorites.length < total,
+                });
+            });
+        })
         .catch(() => res.status(500).json({ message: 'Error fetching events' }));
 });
 
-app.get('/events/:id', (req, res) => {
+app.get('/events/:id', optionalAuth, (req, res) => {
     let event;
 
     EventModel.findById(req.params.id)
         .then(foundEvent => {
             if (!foundEvent) return Promise.reject({ status: 404 });
             event = foundEvent;
-            return BookingModel.countDocuments({ event: event._id });
+            return Promise.all([
+                BookingModel.countDocuments({ event: event._id }),
+                ReviewModel.aggregate([
+                    { $match: { event: event._id } },
+                    { $group: { _id: '$event', avgRating: { $avg: '$rating' }, reviewCount: { $sum: 1 } } },
+                ]),
+                getFavoriteIdSet(req.user?.id),
+            ]);
         })
-        .then(bookedCount => {
-            res.status(200).json({ ...event.toObject(), bookedCount });
+        .then(([bookedCount, ratingResult, favoriteIds]) => {
+            const rating = ratingResult[0];
+            res.status(200).json({
+                ...event.toObject(),
+                bookedCount,
+                avgRating: rating ? Math.round(rating.avgRating * 10) / 10 : null,
+                reviewCount: rating ? rating.reviewCount : 0,
+                isFavorited: favoriteIds.has(event._id.toString()),
+            });
         })
         .catch(err => {
             if (err && err.status === 404) return res.status(404).json({ message: 'Event not found' });
             res.status(400).json({ message: 'Invalid event id' });
         });
+});
+
+// Favorites
+
+app.post('/favorites/:eventId', requireAuth, (req, res) => {
+    EventModel.findById(req.params.eventId)
+        .then(event => {
+            if (!event) return res.status(404).json({ message: 'Event not found' });
+
+            return FormDataModel.findByIdAndUpdate(
+                req.user.id,
+                { $addToSet: { favorites: event._id } },
+                { new: true }
+            ).then(() => res.status(200).json({ isFavorited: true }));
+        })
+        .catch(() => res.status(400).json({ message: 'Could not add favorite' }));
+});
+
+app.delete('/favorites/:eventId', requireAuth, (req, res) => {
+    FormDataModel.findByIdAndUpdate(
+        req.user.id,
+        { $pull: { favorites: req.params.eventId } },
+        { new: true }
+    )
+        .then(() => res.status(200).json({ isFavorited: false }))
+        .catch(() => res.status(400).json({ message: 'Could not remove favorite' }));
+});
+
+app.get('/favorites/mine', requireAuth, (req, res) => {
+    let events;
+
+    FormDataModel.findById(req.user.id)
+        .populate('favorites')
+        .then(user => {
+            events = (user?.favorites || []).filter(Boolean);
+            return ReviewModel.aggregate([
+                { $match: { event: { $in: events.map((e) => e._id) } } },
+                { $group: { _id: '$event', avgRating: { $avg: '$rating' }, reviewCount: { $sum: 1 } } },
+            ]);
+        })
+        .then(ratings => {
+            const ratingByEvent = new Map(ratings.map((r) => [r._id.toString(), r]));
+            const withRatings = events.map((event) => {
+                const rating = ratingByEvent.get(event._id.toString());
+                return {
+                    ...event.toObject(),
+                    avgRating: rating ? Math.round(rating.avgRating * 10) / 10 : null,
+                    reviewCount: rating ? rating.reviewCount : 0,
+                    isFavorited: true,
+                };
+            });
+            res.status(200).json(withRatings);
+        })
+        .catch(() => res.status(500).json({ message: 'Error fetching favorites' }));
 });
 
 // Admin: event management
@@ -317,14 +486,14 @@ app.post('/admin/upload', requireAuth, requireAdmin, (req, res) => {
 });
 
 app.post('/admin/events', requireAuth, requireAdmin, (req, res) => {
-    const { name, description, imageUrl, category, details, activities, decorations, games, capacity } = req.body;
+    const { name, description, imageUrl, category, location, details, activities, decorations, games, capacity } = req.body;
 
     if (!name || !description || !imageUrl || !category) {
         return res.status(400).json({ message: 'name, description, imageUrl and category are required' });
     }
 
     const event = new EventModel({
-        name, description, imageUrl, category, details, activities, decorations, games,
+        name, description, imageUrl, category, location, details, activities, decorations, games,
         capacity: capacity === '' || capacity == null ? null : Number(capacity),
     });
 
@@ -334,12 +503,12 @@ app.post('/admin/events', requireAuth, requireAdmin, (req, res) => {
 });
 
 app.put('/admin/events/:id', requireAuth, requireAdmin, (req, res) => {
-    const { name, description, imageUrl, category, details, activities, decorations, games, capacity } = req.body;
+    const { name, description, imageUrl, category, location, details, activities, decorations, games, capacity } = req.body;
 
     EventModel.findByIdAndUpdate(
         req.params.id,
         {
-            name, description, imageUrl, category, details, activities, decorations, games,
+            name, description, imageUrl, category, location, details, activities, decorations, games,
             capacity: capacity === '' || capacity == null ? null : Number(capacity),
         },
         { new: true, runValidators: true }
@@ -360,6 +529,76 @@ app.delete('/admin/events/:id', requireAuth, requireAdmin, (req, res) => {
         })
         .then(() => res.status(200).json({ message: 'Event deleted' }))
         .catch(() => res.status(500).json({ message: 'Error deleting event' }));
+});
+
+// Admin: analytics
+
+app.get('/admin/analytics', requireAuth, requireAdmin, (req, res) => {
+    const DAYS = 14;
+    const now = new Date();
+    const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (DAYS - 1)));
+
+    Promise.all([
+        EventModel.countDocuments(),
+        BookingModel.countDocuments(),
+        FormDataModel.countDocuments(),
+        ReviewModel.countDocuments(),
+        BookingModel.aggregate([
+            { $match: { createdAt: { $gte: since } } },
+            { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+        ]),
+        ReviewModel.aggregate([
+            { $group: { _id: '$event', avgRating: { $avg: '$rating' }, reviewCount: { $sum: 1 } } },
+            { $sort: { avgRating: -1, reviewCount: -1 } },
+            { $limit: 5 },
+        ]),
+    ])
+        .then(([totalEvents, totalBookings, totalUsers, totalReviews, bookingRows, topRatedRows]) => {
+            const countByDay = new Map(bookingRows.map((row) => [row._id, row.count]));
+            const bookingsByDay = [];
+            for (let i = 0; i < DAYS; i += 1) {
+                const day = new Date(since);
+                day.setUTCDate(day.getUTCDate() + i);
+                const key = day.toISOString().slice(0, 10);
+                bookingsByDay.push({ date: key, count: countByDay.get(key) || 0 });
+            }
+
+            return EventModel.find({ _id: { $in: topRatedRows.map((r) => r._id) } })
+                .then(events => {
+                    const eventById = new Map(events.map((e) => [e._id.toString(), e]));
+                    const topRatedEvents = topRatedRows
+                        .map((row) => {
+                            const event = eventById.get(row._id.toString());
+                            if (!event) return null;
+                            return {
+                                _id: event._id,
+                                name: event.name,
+                                imageUrl: event.imageUrl,
+                                avgRating: Math.round(row.avgRating * 10) / 10,
+                                reviewCount: row.reviewCount,
+                            };
+                        })
+                        .filter(Boolean);
+
+                    res.status(200).json({
+                        totalEvents,
+                        totalBookings,
+                        totalUsers,
+                        totalReviews,
+                        bookingsByDay,
+                        topRatedEvents,
+                    });
+                });
+        })
+        .catch(() => res.status(500).json({ message: 'Error loading analytics' }));
+});
+
+app.get('/admin/reviews', requireAuth, requireAdmin, (req, res) => {
+    ReviewModel.find()
+        .sort({ createdAt: -1 })
+        .populate('event', 'name')
+        .then(reviews => res.status(200).json(reviews))
+        .catch(() => res.status(500).json({ message: 'Error loading reviews' }));
 });
 
 // Bookings
@@ -434,6 +673,61 @@ app.delete('/bookings/:id', requireAuth, (req, res) => {
         .catch(() => res.status(400).json({ message: 'Could not cancel booking' }));
 });
 
+// Reviews
+
+app.get('/events/:id/reviews', (req, res) => {
+    ReviewModel.find({ event: req.params.id })
+        .sort({ createdAt: -1 })
+        .then(reviews => res.status(200).json(reviews))
+        .catch(() => res.status(400).json({ message: 'Invalid event id' }));
+});
+
+app.post('/events/:id/reviews', requireAuth, (req, res) => {
+    const eventId = req.params.id;
+    const rating = Number(req.body.rating);
+    const comment = (req.body.comment || '').trim();
+
+    if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ message: 'A rating between 1 and 5 is required' });
+    }
+
+    EventModel.findById(eventId)
+        .then(event => {
+            if (!event) return Promise.reject({ status: 404, message: 'Event not found' });
+            return BookingModel.findOne({ event: eventId, user: req.user.id });
+        })
+        .then(booking => {
+            if (!booking) {
+                return Promise.reject({ status: 403, message: 'You can only review events you have booked' });
+            }
+            return FormDataModel.findById(req.user.id);
+        })
+        .then(user => {
+            return ReviewModel.findOneAndUpdate(
+                { event: eventId, user: req.user.id },
+                { name: user.name, rating, comment },
+                { new: true, upsert: true, setDefaultsOnInsert: true }
+            );
+        })
+        .then(review => res.status(200).json(review))
+        .catch(err => {
+            if (err && err.status) return res.status(err.status).json({ message: err.message });
+            res.status(500).json({ message: 'Error saving review' });
+        });
+});
+
+app.delete('/reviews/:id', requireAuth, (req, res) => {
+    ReviewModel.findById(req.params.id)
+        .then(review => {
+            if (!review) return res.status(404).json({ message: 'Review not found' });
+            if (review.user.toString() !== req.user.id && !req.user.isAdmin) {
+                return res.status(403).json({ message: 'You can only delete your own review' });
+            }
+            return review.deleteOne().then(() => res.status(200).json({ message: 'Review deleted' }));
+        })
+        .catch(() => res.status(400).json({ message: 'Could not delete review' }));
+});
+
 app.put('/change-password', requireAuth, (req, res) => {
     const { currentPassword, newPassword } = req.body;
 
@@ -460,6 +754,66 @@ app.put('/change-password', requireAuth, (req, res) => {
             });
         })
         .catch(() => res.status(500).json({ message: 'Error finding user' }));
+});
+
+app.get('/profile', requireAuth, (req, res) => {
+    FormDataModel.findById(req.user.id)
+        .then(user => {
+            if (!user) return res.status(404).json({ message: 'User not found' });
+            res.status(200).json({
+                name: user.name,
+                email: user.email,
+                avatarUrl: user.avatarUrl || null,
+                isAdmin: user.isAdmin,
+                hasPassword: !!user.password,
+            });
+        })
+        .catch(() => res.status(500).json({ message: 'Error fetching profile' }));
+});
+
+app.put('/profile', requireAuth, (req, res) => {
+    const { name, email } = req.body;
+
+    if (!name || !email) {
+        return res.status(400).json({ message: 'Name and email are required' });
+    }
+
+    FormDataModel.findOne({ email, _id: { $ne: req.user.id } })
+        .then(existing => {
+            if (existing) {
+                return res.status(400).json({ message: 'Email is already in use' });
+            }
+
+            return FormDataModel.findByIdAndUpdate(req.user.id, { name, email }, { new: true })
+                .then(user => {
+                    if (!user) return res.status(404).json({ message: 'User not found' });
+
+                    const token = signToken(user);
+                    res.status(200).json({
+                        token,
+                        name: user.name,
+                        email: user.email,
+                        avatarUrl: user.avatarUrl || null,
+                        isAdmin: user.isAdmin,
+                        hasPassword: !!user.password,
+                    });
+                });
+        })
+        .catch(() => res.status(500).json({ message: 'Error updating profile' }));
+});
+
+app.post('/profile/avatar', requireAuth, (req, res) => {
+    upload.single('avatar')(req, res, (err) => {
+        if (err) return res.status(400).json({ message: err.message || 'Upload failed' });
+        if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+        FormDataModel.findByIdAndUpdate(req.user.id, { avatarUrl: req.file.path }, { new: true })
+            .then(user => {
+                if (!user) return res.status(404).json({ message: 'User not found' });
+                res.status(200).json({ avatarUrl: user.avatarUrl });
+            })
+            .catch(() => res.status(500).json({ message: 'Error saving avatar' }));
+    });
 });
 
 const PORT = process.env.PORT || 3001;

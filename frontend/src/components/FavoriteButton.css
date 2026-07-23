@@ -1,0 +1,27 @@
+.favorite-button {
+    border: none;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--color-text-muted);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.favorite-button:hover {
+    transform: scale(1.08);
+}
+
+.favorite-button.is-favorited {
+    color: #e0245e;
+}
+
+.favorite-button:disabled {
+    cursor: default;
+}

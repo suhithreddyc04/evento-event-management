@@ -6,16 +6,25 @@ import api from '../api';
 import { useAuth } from '../AuthContext';
 import { useToast } from '../ToastContext';
 import Skeleton from './Skeleton.jsx';
+import StarRating from './StarRating.jsx';
+import FavoriteButton from './FavoriteButton.jsx';
+import EventMap from './EventMap.jsx';
 import { getCategoryFields, getNameLabel } from '../bookingFields';
 
 const EventDetails = () => {
   const { eventId } = useParams();
-  const { isAuthenticated, email } = useAuth();
+  const { isAuthenticated, email, userId, isAdmin } = useAuth();
   const toast = useToast();
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -36,12 +45,64 @@ const EventDetails = () => {
     setSpecialRequests('');
     setFormSubmitted(false);
     setBookingError(null);
+    setReviewRating(0);
+    setReviewComment('');
 
     api.get(`/events/${eventId}`)
       .then(response => setEvent(response.data))
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
+
+    loadReviews();
   }, [eventId]);
+
+  const loadReviews = () => {
+    setReviewsLoading(true);
+    api.get(`/events/${eventId}/reviews`)
+      .then(response => {
+        setReviews(response.data);
+        const existing = response.data.find((review) => review.user === userId);
+        if (existing) {
+          setReviewRating(existing.rating);
+          setReviewComment(existing.comment);
+        }
+      })
+      .catch(() => setReviews([]))
+      .finally(() => setReviewsLoading(false));
+  };
+
+  const myReview = reviews.find((review) => review.user === userId);
+
+  const handleReviewSubmit = (e) => {
+    e.preventDefault();
+    if (!reviewRating) {
+      toast.error('Please select a star rating.');
+      return;
+    }
+
+    setReviewSubmitting(true);
+    api.post(`/events/${eventId}/reviews`, { rating: reviewRating, comment: reviewComment })
+      .then(() => {
+        toast.success(myReview ? 'Review updated!' : 'Thanks for your review!');
+        loadReviews();
+      })
+      .catch(err => {
+        const message = err.response?.status === 403
+          ? 'You can only review events you have booked.'
+          : (err.response?.data?.message || 'Could not submit your review. Please try again.');
+        toast.error(message);
+      })
+      .finally(() => setReviewSubmitting(false));
+  };
+
+  const handleReviewDelete = (reviewId) => {
+    api.delete(`/reviews/${reviewId}`)
+      .then(() => {
+        toast.success('Review deleted.');
+        loadReviews();
+      })
+      .catch(() => toast.error('Could not delete review. Please try again.'));
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -102,11 +163,31 @@ const EventDetails = () => {
     <>
       <Header />
       <div className="event-details">
-        <h1>{event.name}</h1>
+        <div className="event-details-title-row">
+          <h1>{event.name}</h1>
+          <FavoriteButton
+            eventId={event._id}
+            isFavorited={event.isFavorited}
+            onChange={(next) => setEvent((current) => ({ ...current, isFavorited: next }))}
+          />
+        </div>
+        {event.reviewCount > 0 && (
+          <div className="event-rating-summary">
+            <StarRating value={event.avgRating} />
+            <span>{event.avgRating} ({event.reviewCount} review{event.reviewCount === 1 ? '' : 's'})</span>
+          </div>
+        )}
         <img src={event.imageUrl} alt={event.name} className="event-image" />
         <p>{event.description}</p>
         <h3>Details: {event.details}</h3>
         <h3><strong>Category:</strong> {event.category.charAt(0).toUpperCase() + event.category.slice(1)}</h3>
+
+        {event.location && (
+          <div className="event-location">
+            <h3><strong>Location:</strong> {event.location}</h3>
+            <EventMap location={event.location} name={event.name} />
+          </div>
+        )}
 
         <div className="event-activities">
           <h3>Activities:</h3>
@@ -126,6 +207,52 @@ const EventDetails = () => {
         <Link to={`/category/${event.category}`} className="back-link">
           Back to {event.category.charAt(0).toUpperCase() + event.category.slice(1)} Events
         </Link>
+
+        <div className="reviews-container">
+          <h3>Reviews</h3>
+
+          {isAuthenticated && (
+            <form className="review-form" onSubmit={handleReviewSubmit}>
+              <StarRating value={reviewRating} onChange={setReviewRating} readOnly={false} />
+              <textarea
+                rows={2}
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                placeholder="Share your experience with this event..."
+              />
+              <button type="submit" className="btn btn-secondary" disabled={reviewSubmitting}>
+                {reviewSubmitting ? 'Saving...' : myReview ? 'Update Review' : 'Submit Review'}
+              </button>
+            </form>
+          )}
+
+          {reviewsLoading ? (
+            <Skeleton count={2} />
+          ) : reviews.length === 0 ? (
+            <p className="no-reviews">No reviews yet. Be the first to share your experience!</p>
+          ) : (
+            <div className="reviews-list">
+              {reviews.map((review) => (
+                <div key={review._id} className="review-card">
+                  <div className="review-header">
+                    <StarRating value={review.rating} />
+                    <span className="review-author">{review.name}</span>
+                  </div>
+                  {review.comment && <p className="review-comment">{review.comment}</p>}
+                  {(review.user === userId || isAdmin) && (
+                    <button
+                      type="button"
+                      className="review-delete-btn"
+                      onClick={() => handleReviewDelete(review._id)}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="book-form-container">
           <h3>Book This Event</h3>

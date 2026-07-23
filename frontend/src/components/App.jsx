@@ -11,7 +11,9 @@ import Footer from './Footer';
 import EventDetails from './eventdetails.jsx';
 import CategoryEvents from './category.jsx';
 import MyBookings from './MyBookings.jsx';
+import Favorites from './Favorites.jsx';
 import ChangePassword from './ChangePassword.jsx';
+import Profile from './Profile.jsx';
 import Admin from './Admin.jsx';
 import NotFound from './NotFound.jsx';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -33,7 +35,9 @@ function App() {
             <Route path='/about' element={<About/>}/>
             <Route path="/category/:categoryId" element={<CategoryEvents />} />
             <Route path="/my-bookings" element={<MyBookings />} />
+            <Route path="/favorites" element={<Favorites />} />
             <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

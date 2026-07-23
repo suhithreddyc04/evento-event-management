@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from './header';
-import api from '../api';
 import Skeleton from './Skeleton.jsx';
+import EventCard from './EventCard.jsx';
+import EventFilters from './EventFilters.jsx';
+import useEvents from '../hooks/useEvents';
 import './events.css';
 import './category.css';
 
@@ -32,8 +34,6 @@ const categories = [
 const Events = () => {
     const [search, setSearch] = useState('');
     const [query, setQuery] = useState('');
-    const [results, setResults] = useState([]);
-    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         const trimmed = search.trim();
@@ -45,18 +45,25 @@ const Events = () => {
         return () => clearTimeout(timeoutId);
     }, [search]);
 
-    useEffect(() => {
-        if (!query) {
-            setResults([]);
-            return;
-        }
+    const [minRating, setMinRating] = useState('');
+    const [sort, setSort] = useState('');
+    const { events: results, loading, loadingMore, hasMore, loadMore } = useEvents({ search: query, minRating, sort });
+    const sentinelRef = useRef(null);
 
-        setLoading(true);
-        api.get('/events', { params: { search: query } })
-            .then(response => setResults(response.data))
-            .catch(() => setResults([]))
-            .finally(() => setLoading(false));
-    }, [query]);
+    const observerCallback = useCallback((node) => {
+        sentinelRef.current = node;
+    }, []);
+
+    useEffect(() => {
+        if (!sentinelRef.current) return undefined;
+
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) loadMore();
+        }, { rootMargin: '200px' });
+
+        observer.observe(sentinelRef.current);
+        return () => observer.disconnect();
+    }, [loadMore, results.length]);
 
     return (
         <div>
@@ -77,26 +84,24 @@ const Events = () => {
 
                 {query ? (
                     <div className="search-results">
+                        <EventFilters
+                            minRating={minRating}
+                            onMinRatingChange={setMinRating}
+                            sort={sort}
+                            onSortChange={setSort}
+                        />
                         {loading ? (
                             <Skeleton count={3} />
                         ) : results.length > 0 ? (
-                            <div className="events-gallery">
-                                {results.map((event) => (
-                                    <div key={event._id} className="event-card">
-                                        <img
-                                            src={event.imageUrl}
-                                            alt={event.name}
-                                            loading="lazy"
-                                            className="event-image"
-                                        />
-                                        <h2>{event.name}</h2>
-                                        <p>{event.description}</p>
-                                        <Link to={`/events/${event._id}`} className="event-details-link">
-                                            View Details
-                                        </Link>
-                                    </div>
-                                ))}
-                            </div>
+                            <>
+                                <div className="events-gallery">
+                                    {results.map((event) => (
+                                        <EventCard key={event._id} event={event} />
+                                    ))}
+                                </div>
+                                {hasMore && <div ref={observerCallback} className="events-scroll-sentinel" />}
+                                {loadingMore && <Skeleton count={3} />}
+                            </>
                         ) : (
                             <p>No events match "{query}".</p>
                         )}

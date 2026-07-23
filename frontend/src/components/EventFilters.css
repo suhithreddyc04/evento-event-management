@@ -1,0 +1,22 @@
+.event-filters {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+    margin: 0 auto 24px;
+    max-width: 520px;
+}
+
+.event-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+    flex: 1;
+    min-width: 160px;
+}
+
+.event-filter-field label {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}

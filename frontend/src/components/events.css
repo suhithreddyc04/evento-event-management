@@ -24,6 +24,7 @@
     box-shadow: var(--shadow-sm);
     transition: transform 0.25s ease, box-shadow 0.25s ease;
     background-color: var(--color-surface);
+    overflow: hidden;
 }
 
 .category-card:hover {
@@ -42,6 +43,11 @@
     object-fit: cover;
     border-radius: 10px;
     margin-bottom: 10px;
+    transition: transform 0.4s ease;
+}
+
+.category-card:hover .category-image {
+    transform: scale(1.06);
 }
 
 .category-link {

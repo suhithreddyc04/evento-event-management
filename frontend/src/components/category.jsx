@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import Header from './header';
-import api from '../api';
 import Skeleton from './Skeleton.jsx';
+import EventCard from './EventCard.jsx';
+import EventFilters from './EventFilters.jsx';
+import useEvents from '../hooks/useEvents';
 import './category.css';
 
 const categoryDescriptions = {
@@ -14,49 +16,54 @@ const categoryDescriptions = {
 
 const CategoryEvents = () => {
     const { categoryId } = useParams();
-    const [events, setEvents] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [minRating, setMinRating] = useState('');
+    const [sort, setSort] = useState('');
+    const { events, loading, loadingMore, hasMore, error, loadMore } = useEvents({ category: categoryId, minRating, sort });
+    const sentinelRef = useRef(null);
+
+    const observerCallback = useCallback((node) => {
+        sentinelRef.current = node;
+    }, []);
 
     useEffect(() => {
-        setLoading(true);
-        setError(null);
-        api.get('/events', { params: { category: categoryId } })
-            .then(response => setEvents(response.data))
-            .catch(() => setError('Could not load events. Please try again later.'))
-            .finally(() => setLoading(false));
-    }, [categoryId]);
+        if (!sentinelRef.current) return undefined;
+
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) loadMore();
+        }, { rootMargin: '200px' });
+
+        observer.observe(sentinelRef.current);
+        return () => observer.disconnect();
+    }, [loadMore, events.length]);
 
     return (
         <div>
             <Header />
             <section className="events-section">
-                <h1 style={{ color: "hwb(263 0% 0%)" }}>{categoryId.charAt(0).toUpperCase() + categoryId.slice(1)} Events</h1>
+                <h1>{categoryId.charAt(0).toUpperCase() + categoryId.slice(1)} Events</h1>
                 <p className="category-description">
                     {categoryDescriptions[categoryId] || 'Explore our events and find the perfect one for your needs.'}
                 </p>
+                <EventFilters
+                    minRating={minRating}
+                    onMinRatingChange={setMinRating}
+                    sort={sort}
+                    onSortChange={setSort}
+                />
                 {loading ? (
                     <Skeleton count={3} />
                 ) : error ? (
                     <p>{error}</p>
                 ) : events.length > 0 ? (
-                    <div className="events-gallery">
-                        {events.map((event) => (
-                            <div key={event._id} className="event-card">
-                                <img
-                                    src={event.imageUrl}
-                                    alt={event.name}
-                                    loading="lazy"
-                                    className="event-image"
-                                />
-                                <h2>{event.name}</h2>
-                                <p>{event.description}</p>
-                                <Link to={`/events/${event._id}`} className="event-details-link">
-                                    View Details
-                                </Link>
-                            </div>
-                        ))}
-                    </div>
+                    <>
+                        <div className="events-gallery">
+                            {events.map((event) => (
+                                <EventCard key={event._id} event={event} />
+                            ))}
+                        </div>
+                        {hasMore && <div ref={observerCallback} className="events-scroll-sentinel" />}
+                        {loadingMore && <Skeleton count={3} />}
+                    </>
                 ) : (
                     <p>No events available in this category.</p>
                 )}
