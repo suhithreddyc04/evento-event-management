@@ -30,6 +30,15 @@ Running log of what the platform can do. Updated alongside every feature change.
 - **Booking reminder emails** — sent automatically ~1 day before a confirmed booking's date (hourly scheduled job, `reminderSent` flag prevents duplicates)
 - Booking confirmation emails only sent for `confirmed` bookings (not for waitlisted, to avoid inbox clutter)
 
+## Pricing & Payments (Razorpay)
+- Admin sets a per-event `price` and optional `advanceAmount` (deposit) when creating/editing an event
+- Events with an `advanceAmount` put new bookings into `pending_payment` status until the advance is paid via Razorpay Checkout; bookings confirm automatically on successful payment (signature-verified server-side)
+- Once an event is marked "Completed", any confirmed booking that paid an advance is flagged for the remaining balance (`event.price - advanceAmount`) as `finalAmount`, payable through a second Razorpay Checkout flow
+- Admin can manually override a booking's `finalAmount` (e.g. adjust for extra guests/services actually used)
+- **Reviews gated behind final payment** on events with a price — can't leave a review until the balance is settled
+- Razorpay **webhook** endpoint (`POST /webhooks/razorpay`) verifies `x-razorpay-signature` and confirms advance/final payments server-side as a fallback to the client-side confirm call (covers cases where the user closes the tab mid-payment)
+- Payment routes degrade gracefully (503 "Payments are not configured") if Razorpay keys aren't set — the rest of the app still works for free events
+
 ## Reviews & Ratings
 - Star ratings + comments on events
 - **Reviews gated by event completion** — no review option until the admin marks the event "Completed"; enforced both frontend (hidden form) and backend (403)
@@ -66,6 +75,19 @@ Running log of what the platform can do. Updated alongside every feature change.
 - Skeleton loading states
 - Toast notifications
 - Header logo links back to the homepage from anywhere; a back button (browser history, falls back to homepage) appears on every page except the homepage itself
+- **Dark mode** — toggle in the header, defaults to OS preference, persisted across sessions (`ThemeContext.jsx`)
+- India-restricted location autocomplete (Nominatim results biased/filtered to India)
+- Clickable event/category cards (whole card navigates, not just a "View" link/button)
+- Scroll-in `Reveal`/`StaggerGroup` entrance animations applied across About, event details, Footer, auth pages, and empty states
+- Expanded multi-column Footer (brand blurb, quick links, contact, social icons) shown site-wide
+- Friendlier empty states (icon + copy + CTA) on Profile, Favorites, and My Bookings when there's nothing to show yet
+
+## Deployment
+- **Frontend**: Vercel — `https://evento-event-management-chi.vercel.app` (root directory `frontend`, Vite preset, auto-redeploys on push to `master`)
+- **Backend**: Render (free tier) — `https://evento-backend-se2f.onrender.com` (auto-redeploys on push to `master`; free tier sleeps after ~15 min idle, first request after that takes ~30-50s to wake up)
+- **Database**: MongoDB Atlas, network access open to `0.0.0.0/0` (required since Render/Vercel free tiers have no static IP)
+- Frontend build-time env vars (`VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`) set in Vercel project settings; backend secrets set directly in Render's Environment tab — nothing sensitive is committed to git
+- Backend's `CLIENT_URL` env var and the Google OAuth Client's "Authorized JavaScript origins" both point at the live Vercel URL (required for CORS and Google Sign-In to work in production)
 
 ---
-*Not yet built: pricing/capacity-utilization analytics (deferred by request).*
+*Not yet built: pricing/capacity-utilization analytics (deferred by request); Razorpay webhook secret not yet registered in the Razorpay dashboard (optional hardening, deferred).*
