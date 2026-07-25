@@ -1,14 +1,10 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import './homepage.css';
 import Header from './header.jsx';
-
-const stats = [
-    { value: '500+', label: 'Events Hosted' },
-    { value: '350+', label: 'Happy Clients' },
-    { value: '12+', label: 'Cities Covered' },
-    { value: '6', label: 'Years of Experience' },
-];
+import { Reveal, StaggerGroup, StaggerItem } from './Reveal.jsx';
+import { useAuth } from '../AuthContext';
 
 const features = [
     {
@@ -40,33 +36,25 @@ const categoryPreviews = [
     { id: 'reunion', name: 'Reunions', imageUrl: '/images/g2.jpg', tagline: 'Bring everyone back together' },
 ];
 
-const testimonials = [
-    {
-        quote: "Evento turned our wedding into something out of a dream. Every detail was handled beautifully.",
-        name: 'Ananya & Rohit',
-        role: 'Wedding, Bangalore',
-    },
-    {
-        quote: "Our annual conference ran flawlessly. The team anticipated problems before they even happened.",
-        name: 'Karthik Rao',
-        role: 'Corporate Event, Hyderabad',
-    },
-    {
-        quote: "Booking was so easy and the decorations for my daughter's birthday were beyond what we imagined.",
-        name: 'Priya Sharma',
-        role: 'Birthday, Chennai',
-    },
-];
-
 const Home = () => {
     const navigate = useNavigate();
+    const { isAuthenticated, isAdmin } = useAuth();
+
+    if (isAuthenticated && isAdmin) {
+        return <Navigate to="/admin" replace />;
+    }
 
     return (
         <div>
             <Header />
 
             <section className="hero-section">
-                <div className="hero-content">
+                <motion.div
+                    className="hero-content"
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                >
                     <span className="hero-eyebrow">Event Planning, Perfected</span>
                     <h1>
                         Making Every <span className="highlight">Moment</span> Unforgettable
@@ -76,98 +64,89 @@ const Home = () => {
                         Evento brings your vision to life with expert planning and impeccable execution.
                     </p>
                     <div className="hero-actions">
-                        <button className="explore-button" onClick={() => navigate('/events')}>
+                        <motion.button
+                            className="explore-button"
+                            onClick={() => navigate('/events')}
+                            whileHover={{ scale: 1.04, y: -3, boxShadow: '0 12px 32px rgba(245, 165, 36, 0.45)' }}
+                            whileTap={{ scale: 0.97 }}
+                            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                        >
                             Explore Events
-                        </button>
+                        </motion.button>
                         <Link to="/about" className="hero-secondary-link">
                             Learn more <i className="bi bi-arrow-right"></i>
                         </Link>
                     </div>
-                </div>
-                <div className="hero-gallery">
+                </motion.div>
+                <motion.div
+                    className="hero-gallery"
+                    initial={{ opacity: 0, scale: 0.94 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+                >
                     <div className="hero-gallery-grid">
                         <img src="/images/b1.jpg" alt="Beautiful Event Setup" className="hero-img hero-img-1" />
                         <img src="/images/m1.jpg" alt="Memorable Moment" className="hero-img hero-img-2" />
                         <img src="/images/g1.jpg" alt="Reunion Event" className="hero-img hero-img-3" />
                         <img src="/images/b2.jpg" alt="Event Decor" className="hero-img hero-img-4" />
                     </div>
-                </div>
-            </section>
-
-            <section className="stats-section">
-                {stats.map((stat) => (
-                    <div key={stat.label} className="stat-item">
-                        <span className="stat-value">{stat.value}</span>
-                        <span className="stat-label">{stat.label}</span>
-                    </div>
-                ))}
+                </motion.div>
             </section>
 
             <section className="features-section">
-                <div className="section-heading">
+                <Reveal className="section-heading">
                     <span className="section-eyebrow">Why Evento</span>
                     <h2>Everything you need for the perfect event</h2>
-                </div>
-                <div className="features-grid">
+                </Reveal>
+                <StaggerGroup className="features-grid">
                     {features.map((feature) => (
-                        <div key={feature.title} className="feature-card">
+                        <StaggerItem key={feature.title} className="feature-card">
                             <div className="feature-icon">
                                 <i className={`bi ${feature.icon}`}></i>
                             </div>
                             <h3>{feature.title}</h3>
                             <p>{feature.text}</p>
-                        </div>
+                        </StaggerItem>
                     ))}
-                </div>
+                </StaggerGroup>
             </section>
 
             <section className="categories-preview-section">
-                <div className="section-heading">
+                <Reveal className="section-heading">
                     <span className="section-eyebrow">Explore</span>
                     <h2>Find your perfect event type</h2>
-                </div>
-                <div className="categories-preview-grid">
+                </Reveal>
+                <StaggerGroup className="categories-preview-grid">
                     {categoryPreviews.map((category) => (
-                        <Link to={`/category/${category.id}`} key={category.id} className="category-preview-card">
-                            <img src={category.imageUrl} alt={category.name} loading="lazy" />
-                            <div className="category-preview-overlay">
-                                <h3>{category.name}</h3>
-                                <p>{category.tagline}</p>
-                                <span className="category-preview-cta">
-                                    View Events <i className="bi bi-arrow-right"></i>
-                                </span>
-                            </div>
-                        </Link>
+                        <StaggerItem key={category.id} className="category-preview-card">
+                            <Link to={`/category/${category.id}`} className="category-preview-card-link">
+                                <img src={category.imageUrl} alt={category.name} loading="lazy" />
+                                <div className="category-preview-overlay">
+                                    <h3>{category.name}</h3>
+                                    <p>{category.tagline}</p>
+                                    <span className="category-preview-cta">
+                                        View Events <i className="bi bi-arrow-right"></i>
+                                    </span>
+                                </div>
+                            </Link>
+                        </StaggerItem>
                     ))}
-                </div>
+                </StaggerGroup>
             </section>
 
-            <section className="testimonials-section">
-                <div className="section-heading">
-                    <span className="section-eyebrow">Testimonials</span>
-                    <h2>Loved by the people we've celebrated with</h2>
-                </div>
-                <div className="testimonials-grid">
-                    {testimonials.map((testimonial) => (
-                        <div key={testimonial.name} className="testimonial-card">
-                            <i className="bi bi-quote testimonial-quote-icon"></i>
-                            <p className="testimonial-quote">{testimonial.quote}</p>
-                            <div className="testimonial-author">
-                                <span className="testimonial-name">{testimonial.name}</span>
-                                <span className="testimonial-role">{testimonial.role}</span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-            <section className="cta-banner">
+            <Reveal className="cta-banner">
                 <h2>Ready to start planning your event?</h2>
                 <p>Browse our curated events and book the one that fits your celebration.</p>
-                <button className="explore-button" onClick={() => navigate('/events')}>
+                <motion.button
+                    className="explore-button"
+                    onClick={() => navigate('/events')}
+                    whileHover={{ scale: 1.04, y: -3, boxShadow: '0 12px 32px rgba(245, 165, 36, 0.45)' }}
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                >
                     Get Started
-                </button>
-            </section>
+                </motion.button>
+            </Reveal>
         </div>
     );
 };

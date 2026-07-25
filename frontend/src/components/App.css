@@ -15,36 +15,22 @@ html, body {
     flex: 1;
 }
 
-/* Page-load fade/slide-in, applied to the main sections of every page */
-@keyframes fade-slide-up {
-    from {
-        opacity: 0;
-        transform: translateY(16px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.box-section,
-.events-categories-section,
-.events-section,
-.event-details,
-.my-bookings-section,
-.admin-section,
-.hero-section,
-.stats-section,
-.features-section,
-.categories-preview-section,
-.testimonials-section,
-.cta-banner {
-    animation: fade-slide-up 0.5s ease-out;
-}
+/* Page-level fade/slide is now handled by the <PageTransition> framer-motion
+   wrapper in App.jsx, so section-level entrance animation lives there instead
+   of here — keeps every route consistent without double-animating. */
 
 /* Consistent button hover lift across the app */
+.btn,
+.header-button {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
 .btn:hover,
 .header-button:hover {
     transform: translateY(-2px);
-    transition: transform 0.2s ease;
+}
+
+.btn:active,
+.header-button:active {
+    transform: translateY(0);
 }

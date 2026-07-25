@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useLocation, Link } from 'react-router-dom';
 import './eventdetails.css';
 import Header from './header.jsx';
 import api from '../api';
@@ -9,10 +9,15 @@ import Skeleton from './Skeleton.jsx';
 import StarRating from './StarRating.jsx';
 import FavoriteButton from './FavoriteButton.jsx';
 import EventMap from './EventMap.jsx';
+import LocationAutocomplete from './LocationAutocomplete.jsx';
+import { AnimatedDatePicker, AnimatedTimePicker } from './DateTimePicker.jsx';
 import { getCategoryFields, getNameLabel } from '../bookingFields';
+import { payForBooking } from '../payment';
+import { Reveal, StaggerGroup, StaggerItem } from './Reveal.jsx';
 
 const EventDetails = () => {
   const { eventId } = useParams();
+  const location = useLocation();
   const { isAuthenticated, email, userId, isAdmin } = useAuth();
   const toast = useToast();
 
@@ -28,19 +33,22 @@ const EventDetails = () => {
 
   const [formData, setFormData] = useState({
     name: '',
+    phone: '',
     address: '',
     date: '',
+    time: '',
   });
   const [details, setDetails] = useState({});
   const [specialRequests, setSpecialRequests] = useState('');
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [bookingStatus, setBookingStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState(null);
 
   useEffect(() => {
     setLoading(true);
     setNotFound(false);
-    setFormData({ name: '', address: '', date: '' });
+    setFormData({ name: '', phone: '', address: '', date: '', time: '' });
     setDetails({});
     setSpecialRequests('');
     setFormSubmitted(false);
@@ -55,6 +63,11 @@ const EventDetails = () => {
 
     loadReviews();
   }, [eventId]);
+
+  useEffect(() => {
+    if (loading || location.hash !== '#reviews') return;
+    document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' });
+  }, [loading, location.hash]);
 
   const loadReviews = () => {
     setReviewsLoading(true);
@@ -87,9 +100,7 @@ const EventDetails = () => {
         loadReviews();
       })
       .catch(err => {
-        const message = err.response?.status === 403
-          ? 'You can only review events you have booked.'
-          : (err.response?.data?.message || 'Could not submit your review. Please try again.');
+        const message = err.response?.data?.message || 'Could not submit your review. Please try again.';
         toast.error(message);
       })
       .finally(() => setReviewSubmitting(false));
@@ -118,14 +129,64 @@ const EventDetails = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    const { name, phone, address, date, time } = formData;
+    if (!address.trim()) {
+      const message = 'Please enter a venue address.';
+      setBookingError(message);
+      toast.error(message);
+      return;
+    }
+    if (!date || !time) {
+      const message = 'Please select both an event date and time.';
+      setBookingError(message);
+      toast.error(message);
+      return;
+    }
+
     setSubmitting(true);
     setBookingError(null);
 
-    api.post('/bookings', { eventId, ...formData, details, specialRequests })
-      .then(() => {
+    const combinedDate = `${date}T${time}`;
+
+    api.post('/bookings', { eventId, name, phone, address, date: combinedDate, details, specialRequests })
+      .then(response => {
+        const booking = response.data;
+
+        if (booking.status === 'pending_payment') {
+          payForBooking(booking, {
+            onSuccess: () => {
+              setFormSubmitted(true);
+              setBookingStatus('confirmed');
+              setEvent((current) => ({ ...current, bookedCount: (current.bookedCount || 0) + 1 }));
+              toast.success('Payment received! Your booking is confirmed.');
+              setSubmitting(false);
+            },
+            onDismiss: () => {
+              setFormSubmitted(true);
+              setBookingStatus('pending_payment');
+              toast.success("Booking held — complete payment from My Bookings to confirm your spot.");
+              setSubmitting(false);
+            },
+            onError: () => {
+              setFormSubmitted(true);
+              setBookingStatus('pending_payment');
+              toast.error('Payment could not be processed. You can retry from My Bookings.');
+              setSubmitting(false);
+            },
+          });
+          return;
+        }
+
         setFormSubmitted(true);
-        setEvent((current) => ({ ...current, bookedCount: (current.bookedCount || 0) + 1 }));
-        toast.success('Booking confirmed! We will contact you soon.');
+        setBookingStatus(booking.status);
+        if (booking.status === 'confirmed') {
+          setEvent((current) => ({ ...current, bookedCount: (current.bookedCount || 0) + 1 }));
+          toast.success('Thank you! Your booking is confirmed — we will contact you soon.');
+        } else {
+          toast.success("Thank you! This event is at capacity, so you've been added to the waiting list.");
+        }
+        setSubmitting(false);
       })
       .catch(err => {
         let message = 'Could not submit your booking. Please try again.';
@@ -133,11 +194,11 @@ const EventDetails = () => {
         if (err.response?.status === 409) message = err.response?.data?.message || "You've already booked this event.";
         setBookingError(message);
         toast.error(message);
-      })
-      .finally(() => setSubmitting(false));
+        setSubmitting(false);
+      });
   };
 
-  const isSoldOut = event && event.capacity != null && event.bookedCount >= event.capacity;
+  const isAtCapacity = event && event.capacity != null && event.bookedCount >= event.capacity;
 
   if (loading) {
     return (
@@ -178,52 +239,60 @@ const EventDetails = () => {
           </div>
         )}
         <img src={event.imageUrl} alt={event.name} className="event-image" />
+        <p className="event-price">
+          {event.price != null ? `₹${event.price.toLocaleString('en-IN')}` : 'Contact us for pricing'}
+        </p>
         <p>{event.description}</p>
-        <h3>Details: {event.details}</h3>
         <h3><strong>Category:</strong> {event.category.charAt(0).toUpperCase() + event.category.slice(1)}</h3>
 
         {event.location && (
-          <div className="event-location">
+          <Reveal className="event-location">
             <h3><strong>Location:</strong> {event.location}</h3>
             <EventMap location={event.location} name={event.name} />
-          </div>
+          </Reveal>
         )}
 
-        <div className="event-activities">
-          <h3>Activities:</h3>
-          <p>{event.activities}</p>
-        </div>
-
-        <div className="event-decorations">
-          <h3>Decorations:</h3>
-          <p>{event.decorations}</p>
-        </div>
-
-        <div className="event-games">
-          <h3>Games:</h3>
-          <p>{event.games}</p>
-        </div>
+        <StaggerGroup className="event-info-grid">
+          {[
+            { icon: 'bi-info-circle', label: 'Details', value: event.details },
+            { icon: 'bi-people', label: 'Activities', value: event.activities },
+            { icon: 'bi-palette', label: 'Decorations', value: event.decorations },
+            { icon: 'bi-controller', label: 'Games', value: event.games },
+          ].filter((item) => item.value).map((item) => (
+            <StaggerItem key={item.label} className="event-info-card">
+              <div className="event-info-icon">
+                <i className={`bi ${item.icon}`}></i>
+              </div>
+              <h3>{item.label}</h3>
+              <p>{item.value}</p>
+            </StaggerItem>
+          ))}
+        </StaggerGroup>
 
         <Link to={`/category/${event.category}`} className="back-link">
           Back to {event.category.charAt(0).toUpperCase() + event.category.slice(1)} Events
         </Link>
 
-        <div className="reviews-container">
+        <div className="reviews-container" id="reviews">
           <h3>Reviews</h3>
 
           {isAuthenticated && (
-            <form className="review-form" onSubmit={handleReviewSubmit}>
-              <StarRating value={reviewRating} onChange={setReviewRating} readOnly={false} />
-              <textarea
-                rows={2}
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-                placeholder="Share your experience with this event..."
-              />
-              <button type="submit" className="btn btn-secondary" disabled={reviewSubmitting}>
-                {reviewSubmitting ? 'Saving...' : myReview ? 'Update Review' : 'Submit Review'}
-              </button>
-            </form>
+            event.completed ? (
+              <form className="review-form" onSubmit={handleReviewSubmit}>
+                <StarRating value={reviewRating} onChange={setReviewRating} readOnly={false} />
+                <textarea
+                  rows={2}
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder="Share your experience with this event..."
+                />
+                <button type="submit" className="btn btn-secondary" disabled={reviewSubmitting}>
+                  {reviewSubmitting ? 'Saving...' : myReview ? 'Update Review' : 'Submit Review'}
+                </button>
+              </form>
+            ) : (
+              <p className="reviews-not-open-note">Reviews open once this event has taken place.</p>
+            )
           )}
 
           {reviewsLoading ? (
@@ -239,6 +308,11 @@ const EventDetails = () => {
                     <span className="review-author">{review.name}</span>
                   </div>
                   {review.comment && <p className="review-comment">{review.comment}</p>}
+                  {review.adminReply?.text && (
+                    <div className="review-admin-reply">
+                      <strong>Response from Evento:</strong> {review.adminReply.text}
+                    </div>
+                  )}
                   {(review.user === userId || isAdmin) && (
                     <button
                       type="button"
@@ -259,8 +333,8 @@ const EventDetails = () => {
 
           {event.capacity != null && (
             <p className="capacity-note">
-              {isSoldOut
-                ? 'This event is fully booked.'
+              {isAtCapacity
+                ? 'This event is at capacity — new bookings will join the waiting list.'
                 : `${event.capacity - event.bookedCount} of ${event.capacity} spots left`}
             </p>
           )}
@@ -271,9 +345,13 @@ const EventDetails = () => {
               <Link to="/register">create an account</Link>) to book this event.
             </p>
           ) : formSubmitted ? (
-            <p>Thank you for booking! We will contact you soon.</p>
-          ) : isSoldOut ? (
-            <p>Sorry, this event has no spots left.</p>
+            <p>
+              {bookingStatus === 'waitlisted'
+                ? "Thank you! You're on the waiting list — we'll notify you if a spot opens up."
+                : bookingStatus === 'pending_payment'
+                  ? <>Your spot is being held. <Link to="/my-bookings">Complete the advance payment</Link> to confirm it.</>
+                  : 'Thank you! Your booking is confirmed — we will contact you soon.'}
+            </p>
           ) : (
             <form onSubmit={handleSubmit}>
               <p className="booking-as">Booking as <strong>{email}</strong></p>
@@ -291,27 +369,45 @@ const EventDetails = () => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="address">Address:</label>
+                <label htmlFor="phone">Contact Phone Number:</label>
                 <input
-                  type="text"
-                  id="address"
-                  name="address"
-                  placeholder="Venue or contact address"
-                  value={formData.address}
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  placeholder="For day-of coordination"
+                  value={formData.phone}
                   onChange={handleChange}
                   required
                 />
               </div>
 
               <div className="form-group">
+                <label htmlFor="address">Venue Address:</label>
+                <LocationAutocomplete
+                  value={formData.address}
+                  onChange={(value) => setFormData((current) => ({ ...current, address: value }))}
+                  placeholder="Where should we set up?"
+                />
+                {formData.address.trim().length > 3 && (
+                  <EventMap location={formData.address} name="Venue location" />
+                )}
+              </div>
+
+              <div className="form-group">
                 <label htmlFor="date">Event Date:</label>
-                <input
-                  type="date"
+                <AnimatedDatePicker
                   id="date"
-                  name="date"
                   value={formData.date}
-                  onChange={handleChange}
-                  required
+                  onChange={(value) => setFormData((current) => ({ ...current, date: value }))}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="time">Event Time:</label>
+                <AnimatedTimePicker
+                  id="time"
+                  value={formData.time}
+                  onChange={(value) => setFormData((current) => ({ ...current, time: value }))}
                 />
               </div>
 
@@ -356,7 +452,7 @@ const EventDetails = () => {
               {bookingError && <p className="booking-error">{bookingError}</p>}
 
               <button type="submit" className="btn btn-primary" disabled={submitting}>
-                {submitting ? 'Submitting...' : 'Submit Booking'}
+                {submitting ? 'Submitting...' : isAtCapacity ? 'Join Waiting List' : 'Submit Booking'}
               </button>
             </form>
           )}

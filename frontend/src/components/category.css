@@ -36,20 +36,27 @@
 }
 
 .event-card {
+    position: relative;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     padding: 16px;
     text-align: center;
     width: 260px;
-    box-shadow: var(--shadow-sm);
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    box-shadow: var(--shadow-md);
     background-color: var(--color-surface);
     overflow: hidden;
+    /* Hover lift/shadow is animated by framer-motion (whileHover) in
+       EventCard.jsx, not CSS — keeps it in sync with the entrance animation. */
 }
 
-.event-card:hover {
-    transform: translateY(-6px);
-    box-shadow: var(--shadow-md);
+.event-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 100%);
 }
 
 .event-card h2 {
@@ -82,6 +89,12 @@
 
 .event-card:hover .event-image {
     transform: scale(1.06);
+}
+
+.event-card-price {
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 4px 0 0;
 }
 
 .event-details-link {

@@ -11,6 +11,7 @@ export const CATEGORY_FIELDS = {
         { name: 'cateringRequired', label: 'Catering Required', type: 'select', options: ['Yes', 'No'] },
     ],
     birthday: [
+        { name: 'guestCount', label: 'Expected Guest Count', type: 'number' },
         { name: 'ageGroup', label: 'Age / Age Group', type: 'text' },
         { name: 'theme', label: 'Party Theme', type: 'text' },
         { name: 'cakeRequired', label: 'Cake Required', type: 'select', options: ['Yes', 'No'] },

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import api from './api';
 
 const AuthContext = createContext(null);
 
@@ -15,6 +16,7 @@ const decodeToken = (token) => {
 
 export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(() => localStorage.getItem('token'));
+    const [avatarUrl, setAvatarUrl] = useState(null);
 
     const login = (newToken) => {
         localStorage.setItem('token', newToken);
@@ -24,9 +26,20 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         localStorage.removeItem('token');
         setToken(null);
+        setAvatarUrl(null);
     };
 
     const claims = useMemo(() => decodeToken(token), [token]);
+
+    useEffect(() => {
+        if (!token) {
+            setAvatarUrl(null);
+            return;
+        }
+        api.get('/profile')
+            .then(response => setAvatarUrl(response.data.avatarUrl || null))
+            .catch(() => setAvatarUrl(null));
+    }, [token]);
 
     return (
         <AuthContext.Provider value={{
@@ -36,6 +49,8 @@ export const AuthProvider = ({ children }) => {
             hasPassword: !!claims?.hasPassword,
             email: claims?.email || null,
             userId: claims?.id || null,
+            avatarUrl,
+            setAvatarUrl,
             login,
             logout,
         }}>

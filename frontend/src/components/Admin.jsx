@@ -5,7 +5,9 @@ import api from '../api';
 import { useAuth } from '../AuthContext';
 import { useToast } from '../ToastContext';
 import AdminAnalytics from './AdminAnalytics.jsx';
+import AdminBookings from './AdminBookings.jsx';
 import LocationAutocomplete from './LocationAutocomplete.jsx';
+import { CATEGORIES } from '../categories';
 import './admin.css';
 
 const emptyForm = {
@@ -19,6 +21,8 @@ const emptyForm = {
     decorations: '',
     games: '',
     capacity: '',
+    price: '',
+    advanceAmount: '',
 };
 
 const Admin = () => {
@@ -26,6 +30,7 @@ const Admin = () => {
     const toast = useToast();
 
     const [events, setEvents] = useState([]);
+    const [lowRatingCounts, setLowRatingCounts] = useState({});
     const [loading, setLoading] = useState(true);
     const [form, setForm] = useState(emptyForm);
     const [editingId, setEditingId] = useState(null);
@@ -39,6 +44,18 @@ const Admin = () => {
             .then(response => setEvents(response.data.events))
             .catch(() => toast.error('Could not load events.'))
             .finally(() => setLoading(false));
+
+        api.get('/admin/reviews')
+            .then(response => {
+                const counts = {};
+                response.data.forEach((review) => {
+                    if (review.rating <= 2 && review.event) {
+                        counts[review.event._id] = (counts[review.event._id] || 0) + 1;
+                    }
+                });
+                setLowRatingCounts(counts);
+            })
+            .catch(() => {});
     };
 
     useEffect(() => {
@@ -67,13 +84,17 @@ const Admin = () => {
             decorations: event.decorations || '',
             games: event.games || '',
             capacity: event.capacity ?? '',
+            price: event.price ?? '',
+            advanceAmount: event.advanceAmount ?? '',
         });
+        setActiveTab('eventForm');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const cancelEdit = () => {
         setEditingId(null);
         setForm(emptyForm);
+        setActiveTab('events');
     };
 
     const handleSubmit = (e) => {
@@ -123,6 +144,15 @@ const Admin = () => {
             .catch(() => toast.error('Could not delete event.'));
     };
 
+    const handleToggleComplete = (event) => {
+        api.put(`/admin/events/${event._id}/complete`, { completed: !event.completed })
+            .then(() => {
+                toast.success(event.completed ? 'Event reopened.' : 'Event marked as completed.');
+                loadEvents();
+            })
+            .catch(() => toast.error('Could not update event status.'));
+    };
+
     return (
         <div>
             <Header />
@@ -139,6 +169,20 @@ const Admin = () => {
                     </button>
                     <button
                         type="button"
+                        className={`admin-tab-button ${activeTab === 'eventForm' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('eventForm')}
+                    >
+                        {editingId ? 'Edit Event' : 'Add New Event'}
+                    </button>
+                    <button
+                        type="button"
+                        className={`admin-tab-button ${activeTab === 'bookings' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('bookings')}
+                    >
+                        Bookings
+                    </button>
+                    <button
+                        type="button"
                         className={`admin-tab-button ${activeTab === 'analytics' ? 'active' : ''}`}
                         onClick={() => setActiveTab('analytics')}
                     >
@@ -148,9 +192,10 @@ const Admin = () => {
 
                 {activeTab === 'analytics' ? (
                     <AdminAnalytics />
-                ) : (
-                    <>
-                <form onSubmit={handleSubmit} className="admin-form">
+                ) : activeTab === 'bookings' ? (
+                    <AdminBookings events={events} />
+                ) : activeTab === 'eventForm' ? (
+                    <form onSubmit={handleSubmit} className="admin-form">
                     <h2>{editingId ? 'Edit Event' : 'Add New Event'}</h2>
 
                     <div className="admin-form-grid">
@@ -161,10 +206,9 @@ const Admin = () => {
                         <div className="mb-3">
                             <label className="form-label">Category</label>
                             <select className="form-select" name="category" value={form.category} onChange={handleChange} required>
-                                <option value="wedding">Wedding</option>
-                                <option value="corporate">Corporate</option>
-                                <option value="birthday">Birthday</option>
-                                <option value="reunion">Reunion</option>
+                                {CATEGORIES.map((category) => (
+                                    <option key={category.id} value={category.id}>{category.name}</option>
+                                ))}
                             </select>
                         </div>
                         <div className="mb-3">
@@ -192,6 +236,14 @@ const Admin = () => {
                         <div className="mb-3">
                             <label className="form-label">Capacity (blank = unlimited)</label>
                             <input className="form-control" name="capacity" type="number" min="0" value={form.capacity} onChange={handleChange} />
+                        </div>
+                        <div className="mb-3">
+                            <label className="form-label">Price (blank = contact for pricing)</label>
+                            <input className="form-control" name="price" type="number" min="0" step="0.01" value={form.price} onChange={handleChange} />
+                        </div>
+                        <div className="mb-3">
+                            <label className="form-label">Advance Payment (blank = no payment required to book)</label>
+                            <input className="form-control" name="advanceAmount" type="number" min="0" step="0.01" value={form.advanceAmount} onChange={handleChange} />
                         </div>
                         <div className="mb-3">
                             <label className="form-label">Location</label>
@@ -228,14 +280,13 @@ const Admin = () => {
                         <button type="submit" className="btn btn-primary" disabled={submitting}>
                             {submitting ? 'Saving...' : editingId ? 'Update Event' : 'Add Event'}
                         </button>
-                        {editingId && (
-                            <button type="button" className="btn btn-secondary" onClick={cancelEdit}>
-                                Cancel Edit
-                            </button>
-                        )}
+                        <button type="button" className="btn btn-secondary" onClick={cancelEdit}>
+                            {editingId ? 'Cancel Edit' : 'Back to Events'}
+                        </button>
                     </div>
                 </form>
-
+                ) : (
+                <>
                 <h2>Existing Events ({events.length})</h2>
                 {loading ? (
                     <p>Loading events...</p>
@@ -247,17 +298,46 @@ const Admin = () => {
                                     <th>Name</th>
                                     <th>Category</th>
                                     <th>Capacity</th>
+                                    <th>Price</th>
+                                    <th>Advance</th>
+                                    <th>Status</th>
                                     <th></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {events.map((event) => (
                                     <tr key={event._id}>
-                                        <td>{event.name}</td>
+                                        <td>
+                                            {event.name}
+                                            {lowRatingCounts[event._id] > 0 && (
+                                                <span
+                                                    className="admin-flaw-indicator"
+                                                    title={`${lowRatingCounts[event._id]} low-rated review${lowRatingCounts[event._id] === 1 ? '' : 's'}`}
+                                                >
+                                                    ⚠ {lowRatingCounts[event._id]}
+                                                </span>
+                                            )}
+                                        </td>
                                         <td>{event.category}</td>
                                         <td>{event.capacity ?? 'Unlimited'}</td>
+                                        <td>{event.price != null ? `₹${event.price}` : 'Contact us'}</td>
+                                        <td>{event.advanceAmount != null ? `₹${event.advanceAmount}` : 'None'}</td>
+                                        <td>
+                                            {event.bookedCount > 0 ? (
+                                                <span className={`admin-status-badge ${event.completed ? 'is-completed' : 'is-upcoming'}`}>
+                                                    {event.completed ? 'Completed' : 'Upcoming'}
+                                                </span>
+                                            ) : (
+                                                <span className="admin-status-none">No bookings yet</span>
+                                            )}
+                                        </td>
                                         <td className="admin-row-actions">
                                             <button className="btn btn-sm btn-outline-primary" onClick={() => startEdit(event)}>Edit</button>
+                                            {event.bookedCount > 0 && (
+                                                <button className="btn btn-sm btn-outline-secondary" onClick={() => handleToggleComplete(event)}>
+                                                    {event.completed ? 'Reopen' : 'Complete Event'}
+                                                </button>
+                                            )}
                                             <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(event._id)}>Delete</button>
                                         </td>
                                     </tr>
@@ -266,7 +346,7 @@ const Admin = () => {
                         </table>
                     </div>
                 )}
-                    </>
+                </>
                 )}
             </section>
         </div>

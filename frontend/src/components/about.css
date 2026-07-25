@@ -32,52 +32,153 @@
     color: var(--color-accent);
 }
 
-.reviews-section {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 48px 20px;
+.section-heading {
     text-align: center;
+    max-width: 640px;
+    margin: 0 auto 2.5rem;
 }
 
-.reviews-section h2 {
+.section-eyebrow {
+    display: inline-block;
+    color: var(--color-accent-dark);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.section-heading h2 {
     font-size: 2rem;
-    color: var(--color-primary);
-    margin-bottom: 24px;
+    color: var(--color-text);
+    margin: 0;
 }
 
-.review-container {
+/* ---------- What We Offer ---------- */
+.offer-section {
+    max-width: 1100px;
+    margin: 4rem auto;
+    padding: 0 20px;
+}
+
+.offer-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
 }
 
-.review-card {
+.offer-card {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-    padding: 20px;
+    border-radius: var(--radius-lg);
+    padding: 1.75rem 1.25rem;
     text-align: center;
+    box-shadow: var(--shadow-sm);
     transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.review-card:hover {
-    transform: translateY(-4px);
+.offer-card:hover {
+    transform: translateY(-6px);
     box-shadow: var(--shadow-md);
 }
 
-.review-card h3 {
-    font-size: 1.2rem;
-    margin-bottom: 10px;
+.offer-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    color: #fff;
+    font-size: 1.5rem;
+}
+
+.offer-card h3 {
+    font-size: 1.1rem;
+    margin: 0 0 8px;
     color: var(--color-text);
 }
 
-.review-card p {
-    font-size: 1rem;
+.offer-card p {
+    font-size: 0.9rem;
     color: var(--color-text-muted);
+    line-height: 1.6;
+    margin: 0;
 }
 
-.review-rating {
-    color: var(--color-accent-dark);
-    font-size: 1.1rem;
+/* ---------- How Evento Works ---------- */
+.steps-section {
+    max-width: 1100px;
+    margin: 4rem auto;
+    padding: 0 20px;
+}
+
+.steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.75rem;
+}
+
+.step-card {
+    position: relative;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.step-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-md);
+}
+
+.step-number {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    font-family: var(--font-heading);
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-border);
+}
+
+.step-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: linear-gradient(120deg, var(--color-accent) 0%, var(--color-accent-dark) 100%);
+    color: #fff;
+    font-size: 1.5rem;
+}
+
+.step-card h3 {
+    font-size: 1.15rem;
+    margin: 0 0 8px;
+    color: var(--color-text);
+}
+
+.step-card p {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    margin: 0;
+}
+
+@media (max-width: 900px) {
+    .offer-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .steps-grid {
+        grid-template-columns: 1fr;
+    }
 }

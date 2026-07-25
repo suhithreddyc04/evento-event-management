@@ -26,7 +26,7 @@ const EventMap = ({ location, name }) => {
         setStatus('loading');
         const controller = new AbortController();
 
-        fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(location)}`, {
+        fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=${encodeURIComponent(location)}`, {
             signal: controller.signal,
         })
             .then(res => res.json())

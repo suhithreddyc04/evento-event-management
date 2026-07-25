@@ -43,9 +43,46 @@
 }
 
 .booking-info h2 {
-    margin: 0 0 8px;
+    margin: 0;
     font-size: 1.2rem;
     color: var(--color-text);
+}
+
+.booking-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.booking-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.booking-status-badge.is-confirmed {
+    background: rgba(34, 139, 87, 0.14);
+    color: #1f7a4d;
+}
+
+.booking-status-badge.is-waitlisted {
+    background: rgba(217, 140, 15, 0.16);
+    color: var(--color-accent-dark);
+}
+
+.booking-status-badge.is-pending-payment {
+    background: rgba(199, 60, 60, 0.14);
+    color: #b83232;
+}
+
+.booking-status-badge.is-event-completed {
+    background: rgba(91, 33, 182, 0.12);
+    color: var(--color-primary);
 }
 
 .booking-info p {

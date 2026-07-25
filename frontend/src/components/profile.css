@@ -38,6 +38,22 @@
     font-size: 0.9rem;
 }
 
+.profile-avatar-remove {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: #d9534f;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.profile-avatar-remove:hover,
+.profile-avatar-remove:focus {
+    text-decoration: underline;
+    outline: none;
+}
+
 .profile-bookings {
     max-width: 720px;
     margin: 40px auto 0;
@@ -88,4 +104,28 @@
 
 .profile-booking-row .event-details-link {
     margin-left: auto;
+}
+
+.booking-status-badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.booking-status-badge.is-confirmed {
+    background: rgba(34, 139, 87, 0.14);
+    color: #1f7a4d;
+}
+
+.booking-status-badge.is-waitlisted {
+    background: rgba(217, 140, 15, 0.16);
+    color: var(--color-accent-dark);
+}
+
+.booking-status-badge.is-event-completed {
+    background: rgba(91, 33, 182, 0.12);
+    color: var(--color-primary);
 }

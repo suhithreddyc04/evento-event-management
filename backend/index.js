@@ -11,11 +11,18 @@ const { v2: cloudinary } = require('cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const rateLimit = require('express-rate-limit');
 const { OAuth2Client } = require('google-auth-library');
+const Razorpay = require('razorpay');
 const FormDataModel = require('./models/FormData');
 const EventModel = require('./models/Event');
 const BookingModel = require('./models/Booking');
 const ReviewModel = require('./models/Review');
-const { sendResetPasswordEmail, sendBookingConfirmationEmail } = require('./mailer');
+const {
+    sendResetPasswordEmail,
+    sendBookingConfirmationEmail,
+    sendWaitlistPromotedEmail,
+    sendWaitlistPaymentRequiredEmail,
+    sendBookingReminderEmail,
+} = require('./mailer');
 
 dotenv.config();
 
@@ -27,6 +34,12 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Razorpay keys are optional — events with no advanceAmount never need this client,
+// and we don't want a missing/blank key to crash the whole server on startup.
+const razorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
+    ? new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET })
+    : null;
+
 const getAdminEmails = () =>
     (process.env.ADMIN_EMAILS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
 
@@ -34,7 +47,9 @@ const getAdminEmails = () =>
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const app = express();
-app.use(express.json());
+// Stash the raw body alongside the parsed one — Razorpay webhook signatures
+// are computed over the exact raw bytes, which express.json() would otherwise discard.
+app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.use(cors());
 
 const upload = multer({
@@ -346,7 +361,14 @@ app.get('/events', optionalAuth, (req, res) => {
                     ],
                 },
                 reviewCount: { $size: '$reviewDocs' },
-                bookedCount: { $size: '$bookingDocs' },
+                bookedCount: {
+                    $size: {
+                        $filter: {
+                            input: '$bookingDocs',
+                            cond: { $in: ['$$this.status', ['confirmed', 'pending_payment']] },
+                        },
+                    },
+                },
             },
         },
     ];
@@ -396,7 +418,7 @@ app.get('/events/:id', optionalAuth, (req, res) => {
             if (!foundEvent) return Promise.reject({ status: 404 });
             event = foundEvent;
             return Promise.all([
-                BookingModel.countDocuments({ event: event._id }),
+                BookingModel.countDocuments({ event: event._id, status: { $in: ['confirmed', 'pending_payment'] } }),
                 ReviewModel.aggregate([
                     { $match: { event: event._id } },
                     { $group: { _id: '$event', avgRating: { $avg: '$rating' }, reviewCount: { $sum: 1 } } },
@@ -486,7 +508,7 @@ app.post('/admin/upload', requireAuth, requireAdmin, (req, res) => {
 });
 
 app.post('/admin/events', requireAuth, requireAdmin, (req, res) => {
-    const { name, description, imageUrl, category, location, details, activities, decorations, games, capacity } = req.body;
+    const { name, description, imageUrl, category, location, details, activities, decorations, games, capacity, price, advanceAmount } = req.body;
 
     if (!name || !description || !imageUrl || !category) {
         return res.status(400).json({ message: 'name, description, imageUrl and category are required' });
@@ -495,6 +517,8 @@ app.post('/admin/events', requireAuth, requireAdmin, (req, res) => {
     const event = new EventModel({
         name, description, imageUrl, category, location, details, activities, decorations, games,
         capacity: capacity === '' || capacity == null ? null : Number(capacity),
+        price: price === '' || price == null ? null : Number(price),
+        advanceAmount: advanceAmount === '' || advanceAmount == null ? null : Number(advanceAmount),
     });
 
     event.save()
@@ -503,13 +527,15 @@ app.post('/admin/events', requireAuth, requireAdmin, (req, res) => {
 });
 
 app.put('/admin/events/:id', requireAuth, requireAdmin, (req, res) => {
-    const { name, description, imageUrl, category, location, details, activities, decorations, games, capacity } = req.body;
+    const { name, description, imageUrl, category, location, details, activities, decorations, games, capacity, price, advanceAmount } = req.body;
 
     EventModel.findByIdAndUpdate(
         req.params.id,
         {
             name, description, imageUrl, category, location, details, activities, decorations, games,
             capacity: capacity === '' || capacity == null ? null : Number(capacity),
+            price: price === '' || price == null ? null : Number(price),
+            advanceAmount: advanceAmount === '' || advanceAmount == null ? null : Number(advanceAmount),
         },
         { new: true, runValidators: true }
     )
@@ -529,6 +555,73 @@ app.delete('/admin/events/:id', requireAuth, requireAdmin, (req, res) => {
         })
         .then(() => res.status(200).json({ message: 'Event deleted' }))
         .catch(() => res.status(500).json({ message: 'Error deleting event' }));
+});
+
+app.put('/admin/events/:id/complete', requireAuth, requireAdmin, (req, res) => {
+    const completed = req.body.completed !== undefined ? !!req.body.completed : true;
+
+    EventModel.findByIdAndUpdate(req.params.id, { completed }, { new: true })
+        .then(updated => {
+            if (!updated) return res.status(404).json({ message: 'Event not found' });
+            res.status(200).json(updated);
+            if (completed) {
+                activateFinalPayments(updated._id).catch(err =>
+                    console.error('Activating final payments failed:', err)
+                );
+            }
+        })
+        .catch(() => res.status(500).json({ message: 'Error updating event' }));
+});
+
+app.get('/admin/bookings', requireAuth, requireAdmin, (req, res) => {
+    const filter = {};
+    if (req.query.eventId) filter.event = req.query.eventId;
+
+    // Default view (no event picked) hides completed events to stay uncluttered,
+    // but picking a specific event — including a completed one — shows all its
+    // bookings, since admins need this to manage final payments after the event.
+    BookingModel.find(filter)
+        .sort({ createdAt: -1 })
+        .populate('event', 'name capacity completed')
+        .then(bookings => res.status(200).json(bookings.filter(booking =>
+            booking.event && (req.query.eventId || !booking.event.completed)
+        )))
+        .catch(() => res.status(500).json({ message: 'Error loading bookings' }));
+});
+
+app.put('/admin/bookings/:id/final-amount', requireAuth, requireAdmin, (req, res) => {
+    const { finalAmount } = req.body;
+    const amount = finalAmount === '' || finalAmount == null ? null : Number(finalAmount);
+
+    if (amount != null && (Number.isNaN(amount) || amount < 0)) {
+        return res.status(400).json({ message: 'finalAmount must be a non-negative number' });
+    }
+
+    BookingModel.findById(req.params.id)
+        .then(booking => {
+            if (!booking) return Promise.reject({ status: 404, message: 'Booking not found' });
+
+            booking.finalAmount = amount;
+            // A positive amount (re)opens it for payment — even if it was already
+            // paid, since the admin adjusting the figure means a new balance is owed.
+            // Clearing the amount waives it.
+            booking.finalPaymentStatus = amount > 0 ? 'pending' : 'not_required';
+
+            // Charging a final amount only makes sense once the event has taken
+            // place, and reviews/booking UI elsewhere key off event.completed —
+            // so requesting a final payment implicitly marks the event completed
+            // too, keeping that flag consistent with the auto-complete flow.
+            if (amount > 0) {
+                return EventModel.findByIdAndUpdate(booking.event, { completed: true })
+                    .then(() => booking.save());
+            }
+            return booking.save();
+        })
+        .then(saved => res.status(200).json(saved))
+        .catch(err => {
+            if (err && err.status) return res.status(err.status).json({ message: err.message });
+            res.status(500).json({ message: 'Could not update final amount' });
+        });
 });
 
 // Admin: analytics
@@ -552,8 +645,9 @@ app.get('/admin/analytics', requireAuth, requireAdmin, (req, res) => {
             { $sort: { avgRating: -1, reviewCount: -1 } },
             { $limit: 5 },
         ]),
+        ReviewModel.find({}, 'rating createdAt').sort({ createdAt: 1 }),
     ])
-        .then(([totalEvents, totalBookings, totalUsers, totalReviews, bookingRows, topRatedRows]) => {
+        .then(([totalEvents, totalBookings, totalUsers, totalReviews, bookingRows, topRatedRows, allReviews]) => {
             const countByDay = new Map(bookingRows.map((row) => [row._id, row.count]));
             const bookingsByDay = [];
             for (let i = 0; i < DAYS; i += 1) {
@@ -561,6 +655,31 @@ app.get('/admin/analytics', requireAuth, requireAdmin, (req, res) => {
                 day.setUTCDate(day.getUTCDate() + i);
                 const key = day.toISOString().slice(0, 10);
                 bookingsByDay.push({ date: key, count: countByDay.get(key) || 0 });
+            }
+
+            // Cumulative average rating as of each day, so the trend reflects the
+            // platform's overall standing over time rather than a noisy daily average.
+            const ratingTrend = [];
+            let cumulativeSum = 0;
+            let cumulativeCount = 0;
+            let reviewCursor = 0;
+            for (let i = 0; i < DAYS; i += 1) {
+                const day = new Date(since);
+                day.setUTCDate(day.getUTCDate() + i);
+                const dayEnd = new Date(day);
+                dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+                const key = day.toISOString().slice(0, 10);
+
+                while (reviewCursor < allReviews.length && allReviews[reviewCursor].createdAt < dayEnd) {
+                    cumulativeSum += allReviews[reviewCursor].rating;
+                    cumulativeCount += 1;
+                    reviewCursor += 1;
+                }
+
+                ratingTrend.push({
+                    date: key,
+                    avgRating: cumulativeCount > 0 ? Math.round((cumulativeSum / cumulativeCount) * 10) / 10 : null,
+                });
             }
 
             return EventModel.find({ _id: { $in: topRatedRows.map((r) => r._id) } })
@@ -587,6 +706,7 @@ app.get('/admin/analytics', requireAuth, requireAdmin, (req, res) => {
                         totalReviews,
                         bookingsByDay,
                         topRatedEvents,
+                        ratingTrend,
                     });
                 });
         })
@@ -601,14 +721,56 @@ app.get('/admin/reviews', requireAuth, requireAdmin, (req, res) => {
         .catch(() => res.status(500).json({ message: 'Error loading reviews' }));
 });
 
+app.patch('/admin/reviews/:id/flag', requireAuth, requireAdmin, (req, res) => {
+    ReviewModel.findById(req.params.id)
+        .then(review => {
+            if (!review) return Promise.reject({ status: 404, message: 'Review not found' });
+            review.flagged = req.body.flagged !== undefined ? !!req.body.flagged : !review.flagged;
+            return review.save();
+        })
+        .then(review => res.status(200).json(review))
+        .catch(err => res.status(err?.status || 500).json({ message: err?.message || 'Error updating review' }));
+});
+
+app.post('/admin/reviews/:id/reply', requireAuth, requireAdmin, (req, res) => {
+    const text = (req.body.text || '').trim();
+
+    ReviewModel.findById(req.params.id)
+        .then(review => {
+            if (!review) return Promise.reject({ status: 404, message: 'Review not found' });
+            review.adminReply = text ? { text, repliedAt: new Date() } : { text: '', repliedAt: null };
+            return review.save();
+        })
+        .then(review => res.status(200).json(review))
+        .catch(err => res.status(err?.status || 500).json({ message: err?.message || 'Error replying to review' }));
+});
+
+app.get('/admin/customers', requireAuth, requireAdmin, (req, res) => {
+    BookingModel.aggregate([
+        {
+            $group: {
+                _id: '$user',
+                name: { $last: '$name' },
+                email: { $last: '$email' },
+                bookingCount: { $sum: 1 },
+            },
+        },
+        { $match: { bookingCount: { $gt: 1 } } },
+        { $sort: { bookingCount: -1 } },
+        { $limit: 20 },
+    ])
+        .then(customers => res.status(200).json(customers))
+        .catch(() => res.status(500).json({ message: 'Error loading customers' }));
+});
+
 // Bookings
 
 app.post('/bookings', requireAuth, (req, res) => {
-    const { eventId, name, address, date, details, specialRequests } = req.body;
+    const { eventId, name, phone, address, date, details, specialRequests } = req.body;
     const email = req.user.email; // always the logged-in user's email, never trust client input here
 
-    if (!eventId || !name || !address || !date) {
-        return res.status(400).json({ message: 'eventId, name, address and date are required' });
+    if (!eventId || !name || !phone || !address || !date) {
+        return res.status(400).json({ message: 'eventId, name, phone, address and date are required' });
     }
 
     let event;
@@ -624,31 +786,44 @@ app.post('/bookings', requireAuth, (req, res) => {
             if (existingBooking) return Promise.reject({ status: 409, message: 'You already booked this event' });
             if (event.capacity == null) return null;
 
-            return BookingModel.countDocuments({ event: eventId });
+            return BookingModel.countDocuments({ event: eventId, status: { $in: ['confirmed', 'pending_payment'] } });
         })
-        .then(bookedCount => {
-            if (event.capacity != null && bookedCount >= event.capacity) {
-                return Promise.reject({ status: 409, message: 'This event is fully booked' });
-            }
+        .then(heldCount => {
+            // Once the event is at capacity, new bookings go to a waiting list
+            // instead of being rejected outright — the admin can promote them
+            // later if a spot frees up. Otherwise, events with an advance amount
+            // hold the booking as pending_payment until Razorpay checkout succeeds.
+            const atCapacity = event.capacity != null && heldCount >= event.capacity;
+            const status = atCapacity
+                ? 'waitlisted'
+                : event.advanceAmount != null
+                    ? 'pending_payment'
+                    : 'confirmed';
 
             const booking = new BookingModel({
                 event: eventId,
                 user: req.user.id,
                 name,
                 email,
+                phone,
                 address,
                 date,
                 details: details && typeof details === 'object' ? details : {},
                 specialRequests: specialRequests || '',
+                status,
+                advanceAmount: status === 'pending_payment' ? event.advanceAmount : null,
             });
             return booking.save();
         })
         .then(booking => {
             res.status(201).json(booking);
-            // Fire-and-forget: don't fail the booking if the confirmation email fails to send.
-            sendBookingConfirmationEmail(email, event, date, details, specialRequests).catch(err =>
-                console.error('Booking confirmation email failed:', err)
-            );
+            // Only email on an actual confirmed booking — waitlisted and pending-payment
+            // bookings stay silent until confirmed (via payment verification or promotion).
+            if (booking.status === 'confirmed') {
+                sendBookingConfirmationEmail(email, event, date, details, specialRequests).catch(err =>
+                    console.error('Booking confirmation email failed:', err)
+                );
+            }
         })
         .catch(err => {
             if (err && err.status) return res.status(err.status).json({ message: err.message });
@@ -668,9 +843,228 @@ app.delete('/bookings/:id', requireAuth, (req, res) => {
     BookingModel.findOne({ _id: req.params.id, user: req.user.id })
         .then(booking => {
             if (!booking) return res.status(404).json({ message: 'Booking not found' });
-            return booking.deleteOne().then(() => res.status(200).json({ message: 'Booking cancelled' }));
+            return booking.deleteOne().then(() => {
+                res.status(200).json({ message: 'Booking cancelled' });
+                if (booking.status === 'confirmed' || booking.status === 'pending_payment') {
+                    promoteNextWaitlisted(booking.event).catch(err =>
+                        console.error('Waitlist promotion failed:', err)
+                    );
+                }
+            });
         })
         .catch(() => res.status(400).json({ message: 'Could not cancel booking' }));
+});
+
+// Payments (Razorpay advance payment for bookings)
+
+app.post('/payments/create-order', requireAuth, (req, res) => {
+    if (!razorpay) return res.status(503).json({ message: 'Payments are not configured on this server yet.' });
+
+    const { bookingId } = req.body;
+
+    BookingModel.findOne({ _id: bookingId, user: req.user.id })
+        .populate('event', 'name')
+        .then(booking => {
+            if (!booking) return Promise.reject({ status: 404, message: 'Booking not found' });
+            if (booking.status !== 'pending_payment' || booking.advanceAmount == null) {
+                return Promise.reject({ status: 400, message: 'This booking does not require payment' });
+            }
+
+            return razorpay.orders.create({
+                amount: Math.round(booking.advanceAmount * 100),
+                currency: 'INR',
+                receipt: `booking_${booking._id}`,
+            }).then(order => {
+                booking.razorpayOrderId = order.id;
+                return booking.save().then(() => res.status(200).json({
+                    orderId: order.id,
+                    amount: order.amount,
+                    currency: order.currency,
+                    keyId: process.env.RAZORPAY_KEY_ID,
+                    eventName: booking.event?.name || 'Evento booking',
+                }));
+            });
+        })
+        .catch(err => {
+            if (err && err.status) return res.status(err.status).json({ message: err.message });
+            res.status(500).json({ message: 'Could not start payment' });
+        });
+});
+
+app.post('/payments/verify', requireAuth, (req, res) => {
+    if (!razorpay) return res.status(503).json({ message: 'Payments are not configured on this server yet.' });
+
+    const { bookingId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+    if (!bookingId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return res.status(400).json({ message: 'Missing payment verification fields' });
+    }
+
+    let booking;
+    let event;
+
+    BookingModel.findOne({ _id: bookingId, user: req.user.id })
+        .then(found => {
+            if (!found) return Promise.reject({ status: 404, message: 'Booking not found' });
+            if (found.status !== 'pending_payment' || found.razorpayOrderId !== razorpay_order_id) {
+                return Promise.reject({ status: 400, message: 'Booking is not awaiting this payment' });
+            }
+            booking = found;
+
+            const expectedSignature = crypto
+                .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+                .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+                .digest('hex');
+
+            if (expectedSignature !== razorpay_signature) {
+                return Promise.reject({ status: 400, message: 'Payment verification failed' });
+            }
+
+            return EventModel.findById(booking.event);
+        })
+        .then(foundEvent => {
+            event = foundEvent;
+            booking.status = 'confirmed';
+            booking.razorpayPaymentId = razorpay_payment_id;
+            return booking.save();
+        })
+        .then(saved => {
+            res.status(200).json(saved);
+            if (event) {
+                sendBookingConfirmationEmail(saved.email, event, saved.date, saved.details, saved.specialRequests).catch(err =>
+                    console.error('Booking confirmation email failed:', err)
+                );
+            }
+        })
+        .catch(err => {
+            if (err && err.status) return res.status(err.status).json({ message: err.message });
+            res.status(500).json({ message: 'Could not verify payment' });
+        });
+});
+
+app.post('/payments/final/create-order', requireAuth, (req, res) => {
+    if (!razorpay) return res.status(503).json({ message: 'Payments are not configured on this server yet.' });
+
+    const { bookingId } = req.body;
+
+    BookingModel.findOne({ _id: bookingId, user: req.user.id })
+        .populate('event', 'name')
+        .then(booking => {
+            if (!booking) return Promise.reject({ status: 404, message: 'Booking not found' });
+            if (booking.finalPaymentStatus !== 'pending' || booking.finalAmount == null) {
+                return Promise.reject({ status: 400, message: 'No remaining balance is due on this booking' });
+            }
+
+            return razorpay.orders.create({
+                amount: Math.round(booking.finalAmount * 100),
+                currency: 'INR',
+                receipt: `booking_final_${booking._id}`,
+            }).then(order => {
+                booking.finalRazorpayOrderId = order.id;
+                return booking.save().then(() => res.status(200).json({
+                    orderId: order.id,
+                    amount: order.amount,
+                    currency: order.currency,
+                    keyId: process.env.RAZORPAY_KEY_ID,
+                    eventName: booking.event?.name || 'Evento booking',
+                }));
+            });
+        })
+        .catch(err => {
+            if (err && err.status) return res.status(err.status).json({ message: err.message });
+            res.status(500).json({ message: 'Could not start payment' });
+        });
+});
+
+app.post('/payments/final/verify', requireAuth, (req, res) => {
+    if (!razorpay) return res.status(503).json({ message: 'Payments are not configured on this server yet.' });
+
+    const { bookingId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+    if (!bookingId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return res.status(400).json({ message: 'Missing payment verification fields' });
+    }
+
+    BookingModel.findOne({ _id: bookingId, user: req.user.id })
+        .then(booking => {
+            if (!booking) return Promise.reject({ status: 404, message: 'Booking not found' });
+            if (booking.finalPaymentStatus !== 'pending' || booking.finalRazorpayOrderId !== razorpay_order_id) {
+                return Promise.reject({ status: 400, message: 'Booking is not awaiting this payment' });
+            }
+
+            const expectedSignature = crypto
+                .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+                .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+                .digest('hex');
+
+            if (expectedSignature !== razorpay_signature) {
+                return Promise.reject({ status: 400, message: 'Payment verification failed' });
+            }
+
+            booking.finalPaymentStatus = 'paid';
+            booking.finalRazorpayPaymentId = razorpay_payment_id;
+            return booking.save();
+        })
+        .then(saved => res.status(200).json(saved))
+        .catch(err => {
+            if (err && err.status) return res.status(err.status).json({ message: err.message });
+            res.status(500).json({ message: 'Could not verify payment' });
+        });
+});
+
+// Backstop for the client-driven verify flow above: if the browser closes or
+// loses connection right after paying, the checkout `handler` never fires and
+// the booking would stay stuck in pending. Razorpay calls this directly from
+// their servers once a payment captures, so it confirms the booking either way.
+// No requireAuth here — the caller is Razorpay, authenticated via signature instead.
+app.post('/webhooks/razorpay', (req, res) => {
+    if (!process.env.RAZORPAY_WEBHOOK_SECRET) return res.status(503).end();
+
+    const signature = req.headers['x-razorpay-signature'];
+    const expectedSignature = crypto
+        .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
+        .update(req.rawBody)
+        .digest('hex');
+
+    if (!signature || signature !== expectedSignature) {
+        return res.status(400).json({ message: 'Invalid webhook signature' });
+    }
+
+    // Acknowledge immediately — Razorpay retries on non-2xx, and the actual
+    // work below is best-effort/idempotent so a slow DB shouldn't hold up the response.
+    res.status(200).json({ received: true });
+
+    if (req.body.event !== 'payment.captured') return;
+
+    const payment = req.body.payload?.payment?.entity;
+    if (!payment) return;
+
+    BookingModel.findOne({ razorpayOrderId: payment.order_id, status: 'pending_payment' })
+        .then(booking => {
+            if (booking) {
+                booking.status = 'confirmed';
+                booking.razorpayPaymentId = payment.id;
+                return booking.save().then(saved =>
+                    EventModel.findById(saved.event).then(event => {
+                        if (event) {
+                            sendBookingConfirmationEmail(saved.email, event, saved.date, saved.details, saved.specialRequests).catch(err =>
+                                console.error('Booking confirmation email failed:', err)
+                            );
+                        }
+                    })
+                );
+            }
+
+            // Not an advance payment — check whether it's a final-balance payment instead.
+            return BookingModel.findOne({ finalRazorpayOrderId: payment.order_id, finalPaymentStatus: 'pending' })
+                .then(finalBooking => {
+                    if (!finalBooking) return null;
+                    finalBooking.finalPaymentStatus = 'paid';
+                    finalBooking.finalRazorpayPaymentId = payment.id;
+                    return finalBooking.save();
+                });
+        })
+        .catch(err => console.error('Webhook booking confirmation failed:', err));
 });
 
 // Reviews
@@ -694,11 +1088,17 @@ app.post('/events/:id/reviews', requireAuth, (req, res) => {
     EventModel.findById(eventId)
         .then(event => {
             if (!event) return Promise.reject({ status: 404, message: 'Event not found' });
+            if (!event.completed) {
+                return Promise.reject({ status: 403, message: 'Reviews open once this event has taken place' });
+            }
             return BookingModel.findOne({ event: eventId, user: req.user.id });
         })
         .then(booking => {
             if (!booking) {
                 return Promise.reject({ status: 403, message: 'You can only review events you have booked' });
+            }
+            if (booking.finalPaymentStatus === 'pending') {
+                return Promise.reject({ status: 403, message: 'Please pay your remaining balance before leaving a review' });
             }
             return FormDataModel.findById(req.user.id);
         })
@@ -816,7 +1216,115 @@ app.post('/profile/avatar', requireAuth, (req, res) => {
     });
 });
 
+app.delete('/profile/avatar', requireAuth, (req, res) => {
+    FormDataModel.findByIdAndUpdate(req.user.id, { avatarUrl: null }, { new: true })
+        .then(user => {
+            if (!user) return res.status(404).json({ message: 'User not found' });
+            res.status(200).json({ avatarUrl: null });
+        })
+        .catch(() => res.status(500).json({ message: 'Error removing avatar' }));
+});
+
+// Once an event completes, any confirmed booking that paid an advance owes the
+// remaining balance (event.price - advanceAmount). Flags those bookings so the
+// user sees a "Pay Remaining" prompt on My Bookings — nothing is enforced here,
+// the event already happened, this just surfaces the outstanding balance.
+function activateFinalPayments(eventId) {
+    return EventModel.findById(eventId).then(event => {
+        if (!event || event.price == null) return null;
+
+        return BookingModel.find({ event: eventId, status: 'confirmed', advanceAmount: { $ne: null } })
+            .then(bookings => Promise.all(bookings.map(booking => {
+                const remaining = event.price - booking.advanceAmount;
+                if (remaining <= 0) return null;
+                booking.finalAmount = remaining;
+                booking.finalPaymentStatus = 'pending';
+                return booking.save();
+            })));
+    });
+}
+
+// Promotes the oldest waitlisted booking for an event to confirmed once a
+// confirmed spot frees up (e.g. after a cancellation), and emails the promoted user.
+function promoteNextWaitlisted(eventId) {
+    return EventModel.findById(eventId)
+        .then(event => {
+            if (!event) return null;
+            if (event.capacity != null) {
+                return BookingModel.countDocuments({ event: eventId, status: { $in: ['confirmed', 'pending_payment'] } })
+                    .then(heldCount => (heldCount >= event.capacity ? null : event));
+            }
+            return event;
+        })
+        .then(event => {
+            if (!event) return null;
+            return BookingModel.findOne({ event: eventId, status: 'waitlisted' })
+                .sort({ createdAt: 1 })
+                .then(nextBooking => {
+                    if (!nextBooking) return null;
+                    // Events with an advance amount still require payment before the
+                    // promoted spot is actually confirmed.
+                    if (event.advanceAmount != null) {
+                        nextBooking.status = 'pending_payment';
+                        nextBooking.advanceAmount = event.advanceAmount;
+                        return nextBooking.save().then(saved => {
+                            sendWaitlistPaymentRequiredEmail(saved.email, event, saved.date).catch(err =>
+                                console.error('Waitlist payment-required email failed:', err)
+                            );
+                        });
+                    }
+                    nextBooking.status = 'confirmed';
+                    return nextBooking.save().then(saved => {
+                        sendWaitlistPromotedEmail(saved.email, event, saved.date).catch(err =>
+                            console.error('Waitlist promotion email failed:', err)
+                        );
+                    });
+                });
+        });
+}
+
+// Runs periodically: auto-completes events once every confirmed booking's requested
+// date has passed, and sends a reminder email the day before a booking's date.
+function runScheduledJobs() {
+    const now = new Date();
+
+    BookingModel.aggregate([
+        { $match: { status: 'confirmed' } },
+        { $group: { _id: '$event', latestDate: { $max: '$date' } } },
+        { $match: { latestDate: { $lt: now } } },
+    ])
+        .then(rows => EventModel.find({ _id: { $in: rows.map((r) => r._id) }, completed: false }, '_id'))
+        .then(eventsToComplete => {
+            const ids = eventsToComplete.map((e) => e._id);
+            return EventModel.updateMany({ _id: { $in: ids } }, { $set: { completed: true } })
+                .then(() => Promise.all(ids.map((id) => activateFinalPayments(id))));
+        })
+        .catch(err => console.error('Auto-complete job failed:', err));
+
+    const reminderWindowStart = new Date(now.getTime() + 20 * 60 * 60 * 1000);
+    const reminderWindowEnd = new Date(now.getTime() + 44 * 60 * 60 * 1000);
+
+    BookingModel.find({
+        status: 'confirmed',
+        reminderSent: false,
+        date: { $gte: reminderWindowStart, $lte: reminderWindowEnd },
+    })
+        .populate('event', 'name')
+        .then(bookings => Promise.all(bookings.map(booking => {
+            if (!booking.event) return null;
+            return sendBookingReminderEmail(booking.email, booking.event, booking.date)
+                .then(() => {
+                    booking.reminderSent = true;
+                    return booking.save();
+                })
+                .catch(err => console.error('Reminder email failed:', err));
+        })))
+        .catch(err => console.error('Reminder job failed:', err));
+}
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
     console.log(`Server listening on http://127.0.0.1:${PORT}`);
+    runScheduledJobs();
+    setInterval(runScheduledJobs, 60 * 60 * 1000);
 });

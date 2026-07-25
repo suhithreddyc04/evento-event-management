@@ -15,11 +15,23 @@
 .hero-section::before {
     content: '';
     position: absolute;
-    top: -180px;
-    right: -180px;
-    width: 480px;
-    height: 480px;
-    background: radial-gradient(circle, rgba(91, 33, 182, 0.14) 0%, rgba(245, 165, 36, 0.08) 60%, transparent 75%);
+    top: -200px;
+    right: -200px;
+    width: 560px;
+    height: 560px;
+    background: radial-gradient(circle, rgba(91, 33, 182, 0.28) 0%, rgba(124, 58, 237, 0.16) 55%, transparent 75%);
+    border-radius: 50%;
+    z-index: -1;
+}
+
+.hero-section::after {
+    content: '';
+    position: absolute;
+    bottom: -160px;
+    left: -160px;
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, rgba(245, 165, 36, 0.24) 0%, rgba(245, 165, 36, 0.1) 55%, transparent 75%);
     border-radius: 50%;
     z-index: -1;
 }
@@ -129,47 +141,9 @@
     text-decoration: none;
     cursor: pointer;
     box-shadow: var(--shadow-sm);
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-.explore-button:hover {
-    transform: translateY(-3px) scale(1.03);
-    box-shadow: var(--shadow-md);
-}
-
-/* ---------- Stats ---------- */
-.stats-section {
-    max-width: 1100px;
-    margin: 0 auto 2rem;
-    padding: 2.5rem 3rem;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-around;
-    gap: 1.5rem;
-    background: linear-gradient(120deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    text-align: center;
-}
-
-.stat-item {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 120px;
-}
-
-.stat-value {
-    font-family: var(--font-heading);
-    font-size: 2.4rem;
-    font-weight: 700;
-    color: #fff;
-}
-
-.stat-label {
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.85);
-    letter-spacing: 0.02em;
+    /* Hover lift/glow is animated by framer-motion (whileHover) where this
+       button is used, so it stays perfectly in sync with the scale/tap
+       animation instead of two separate transition systems fighting. */
 }
 
 /* ---------- Shared section heading ---------- */
@@ -268,9 +242,16 @@
     height: 260px;
     border-radius: var(--radius-lg);
     overflow: hidden;
-    text-decoration: none;
     box-shadow: var(--shadow-sm);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.category-preview-card-link {
+    display: block;
+    width: 100%;
+    height: 100%;
+    color: inherit;
+    text-decoration: none;
 }
 
 .category-preview-card:hover {
@@ -296,7 +277,7 @@
     flex-direction: column;
     justify-content: flex-end;
     padding: 1.25rem;
-    background: linear-gradient(0deg, rgba(36, 27, 58, 0.88) 0%, rgba(36, 27, 58, 0.15) 60%, transparent 100%);
+    background: linear-gradient(0deg, rgba(59, 22, 122, 0.9) 0%, rgba(91, 33, 182, 0.2) 60%, transparent 100%);
     color: #fff;
 }
 
@@ -323,66 +304,6 @@
 
 .category-preview-card:hover .category-preview-cta {
     gap: 10px;
-}
-
-/* ---------- Testimonials ---------- */
-.testimonials-section {
-    max-width: 1100px;
-    margin: 4.5rem auto;
-    padding: 0 2rem;
-}
-
-.testimonials-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.75rem;
-}
-
-.testimonial-card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: 1.75rem;
-    box-shadow: var(--shadow-sm);
-    position: relative;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-.testimonial-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-}
-
-.testimonial-quote-icon {
-    font-size: 1.75rem;
-    color: var(--color-accent);
-    opacity: 0.7;
-}
-
-.testimonial-quote {
-    font-size: 0.98rem;
-    line-height: 1.7;
-    color: var(--color-text);
-    margin: 0.75rem 0 1.25rem;
-    font-style: italic;
-}
-
-.testimonial-author {
-    display: flex;
-    flex-direction: column;
-    border-top: 1px solid var(--color-border);
-    padding-top: 12px;
-}
-
-.testimonial-name {
-    font-weight: 600;
-    color: var(--color-text);
-    font-size: 0.95rem;
-}
-
-.testimonial-role {
-    font-size: 0.82rem;
-    color: var(--color-text-muted);
 }
 
 /* ---------- CTA banner ---------- */
@@ -423,10 +344,6 @@
     .categories-preview-grid {
         grid-template-columns: repeat(2, 1fr);
     }
-
-    .testimonials-grid {
-        grid-template-columns: 1fr;
-    }
 }
 
 @media (max-width: 768px) {
@@ -451,10 +368,6 @@
 
     .hero-content h1 {
         font-size: 2.2rem;
-    }
-
-    .stats-section {
-        padding: 2rem 1.5rem;
     }
 
     .features-grid,

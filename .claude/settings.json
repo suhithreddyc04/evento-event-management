@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /dev/null -w \"Backend \\(3001\\): %{http_code}\\\\n\" http://localhost:3001/events?limit=1)",
+      "Bash(curl -s -o /dev/null -w \"Frontend \\(5174\\): %{http_code}\\\\n\" http://localhost:5174/)"
+    ]
+  }
+}

@@ -7,6 +7,11 @@ const ReviewSchema = new mongoose.Schema({
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String, default: '' },
     createdAt: { type: Date, default: Date.now },
+    flagged: { type: Boolean, default: false },
+    adminReply: {
+        text: { type: String, default: '' },
+        repliedAt: { type: Date, default: null },
+    },
 });
 
 // One review per user per event — resubmitting edits the existing review instead of duplicating.

@@ -1,27 +1,44 @@
 import React from 'react';
-import './footer.css'; // Import the external CSS file
+import { Link } from 'react-router-dom';
+import './footer.css';
 
 export default function Footer() {
     return (
-        <div className="footer-container">
-            <div className="footer-text">
-                <h5>© 2024 All rights have been reserved</h5>
+        <footer className="footer-container">
+            <div className="footer-content">
+                <div className="footer-brand">
+                    <div className="footer-brand-title">
+                        <img src="/logo.jpg" alt="Evento" className="footer-logo" />
+                        <span>Evento</span>
+                    </div>
+                    <p>
+                        Your partner in unforgettable events — weddings, corporate gatherings,
+                        birthdays, and reunions, planned and booked all in one place.
+                    </p>
+                    <div className="footer-social">
+                        <a href="#" aria-label="Facebook"><i className="bi bi-facebook"></i></a>
+                        <a href="#" aria-label="Instagram"><i className="bi bi-instagram"></i></a>
+                        <a href="#" aria-label="Twitter"><i className="bi bi-twitter"></i></a>
+                    </div>
+                </div>
+
+                <div className="footer-column">
+                    <h4>Quick Links</h4>
+                    <Link to="/home">Home</Link>
+                    <Link to="/events">Events</Link>
+                    <Link to="/about">About</Link>
+                </div>
+
+                <div className="footer-column">
+                    <h4>Get in Touch</h4>
+                    <span><i className="bi bi-envelope"></i> hello@evento.com</span>
+                    <span><i className="bi bi-geo-alt"></i> Bengaluru, India</span>
+                </div>
             </div>
 
-            <div className="footer-socials">
-                <a href="https://www.linkedin.com/in/akshata-ganbote-7a3847247/" target="_blank" rel="noreferrer">
-                    <i className="bi bi-linkedin mx-2 footer-icon"></i>
-                </a>
-                <a href="https://akshata-ganbote.netlify.app/" target="_blank" rel="noreferrer">
-                    <i className="bi bi-globe mx-2 footer-icon"></i>
-                </a>
-                <a href="https://github.com/suhithreddyc" target="_blank" rel="noreferrer">
-                    <i className="bi bi-github mx-2 footer-icon"></i>
-                </a>
-                <a href="mailto:suhithreddyc@gmail.com" target="_blank" rel="noreferrer">
-                    <i className="bi bi-envelope-fill mx-2 footer-icon"></i>
-                </a>
+            <div className="footer-bottom">
+                <p>© 2024 Evento. All rights reserved.</p>
             </div>
-        </div>
+        </footer>
     );
 }

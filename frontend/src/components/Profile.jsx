@@ -5,10 +5,11 @@ import Skeleton from './Skeleton.jsx';
 import api from '../api';
 import { useAuth } from '../AuthContext';
 import { useToast } from '../ToastContext';
+import { Reveal } from './Reveal.jsx';
 import './profile.css';
 
 const Profile = () => {
-    const { isAuthenticated, login } = useAuth();
+    const { isAuthenticated, login, setAvatarUrl: setAuthAvatarUrl } = useAuth();
     const toast = useToast();
 
     const [loading, setLoading] = useState(true);
@@ -16,6 +17,7 @@ const Profile = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [uploading, setUploading] = useState(false);
+    const [removingAvatar, setRemovingAvatar] = useState(false);
     const [saving, setSaving] = useState(false);
 
     const [bookings, setBookings] = useState([]);
@@ -55,10 +57,23 @@ const Profile = () => {
         api.post('/profile/avatar', data, { headers: { 'Content-Type': 'multipart/form-data' } })
             .then(response => {
                 setAvatarUrl(response.data.avatarUrl);
+                setAuthAvatarUrl(response.data.avatarUrl);
                 toast.success('Avatar updated.');
             })
             .catch(err => toast.error(err.response?.data?.message || 'Avatar upload failed.'))
             .finally(() => setUploading(false));
+    };
+
+    const handleRemoveAvatar = () => {
+        setRemovingAvatar(true);
+        api.delete('/profile/avatar')
+            .then(() => {
+                setAvatarUrl(null);
+                setAuthAvatarUrl(null);
+                toast.success('Avatar removed.');
+            })
+            .catch(err => toast.error(err.response?.data?.message || 'Could not remove avatar.'))
+            .finally(() => setRemovingAvatar(false));
     };
 
     const handleSubmit = (e) => {
@@ -78,7 +93,7 @@ const Profile = () => {
         <div>
             <Header />
             <section className="profile-section">
-                <h1>My Profile</h1>
+                <Reveal><h1>My Profile</h1></Reveal>
 
                 {loading ? (
                     <Skeleton count={2} />
@@ -103,6 +118,16 @@ const Profile = () => {
                                         hidden
                                     />
                                 </label>
+                                {avatarUrl && (
+                                    <button
+                                        type="button"
+                                        className="profile-avatar-remove"
+                                        onClick={handleRemoveAvatar}
+                                        disabled={removingAvatar}
+                                    >
+                                        {removingAvatar ? 'Removing...' : 'Remove photo'}
+                                    </button>
+                                )}
                             </div>
 
                             <form onSubmit={handleSubmit}>
@@ -149,9 +174,10 @@ const Profile = () => {
                     {bookingsLoading ? (
                         <Skeleton count={2} />
                     ) : bookings.length === 0 ? (
-                        <p>
-                            You haven't booked any events yet. <Link to="/events">Browse events</Link> to get started.
-                        </p>
+                        <div className="empty-state">
+                            <i className="bi bi-calendar-x"></i>
+                            <p>You haven't booked any events yet. <Link to="/events">Browse events</Link> to get started.</p>
+                        </div>
                     ) : (
                         <div className="profile-bookings-list">
                             {bookings.slice(0, 5).map((booking) => (
@@ -166,7 +192,19 @@ const Profile = () => {
                                     )}
                                     <div>
                                         <h3>{booking.event?.name || 'Event no longer available'}</h3>
-                                        <p>{new Date(booking.date).toLocaleDateString()}</p>
+                                        <p>
+                                            {new Date(booking.date).toLocaleString()}
+                                            {' · '}
+                                            <span className={`booking-status-badge ${booking.status === 'waitlisted' ? 'is-waitlisted' : 'is-confirmed'}`}>
+                                                {booking.status === 'waitlisted' ? 'Waitlisted' : 'Confirmed'}
+                                            </span>
+                                            {booking.event?.completed && (
+                                                <>
+                                                    {' '}
+                                                    <span className="booking-status-badge is-event-completed">Event Completed</span>
+                                                </>
+                                            )}
+                                        </p>
                                     </div>
                                     {booking.event && (
                                         <Link to={`/events/${booking.event._id}`} className="event-details-link">

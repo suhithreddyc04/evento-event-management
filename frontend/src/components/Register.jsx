@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { Link } from "react-router-dom";
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import api from '../api';
 import { useAuth } from '../AuthContext';
 import { useToast } from '../ToastContext';
+import './login.css';
 
 const Register = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const navigate = useNavigate();
     const { login } = useAuth();
@@ -46,60 +47,106 @@ const Register = () => {
     };
 
     return (
-        <div className="auth-page">
-            <div className="auth-card">
-                <h2 className='mb-3'>Create Your Account</h2>
-                    <form onSubmit={handleSubmit}>
-                        <div className="mb-3 text-start">
-                            <label htmlFor="exampleInputEmail1" className="form-label">
-                                <strong >Name</strong>
-                            </label>
-                            <input 
-                                type="text"
-                                placeholder="Enter Name"
-                                className="form-control" 
-                                id="exampleInputname" 
-                                onChange={(event) => setName(event.target.value)}
-                                required
-                            /> 
+        <div className="login-page">
+            <div className="login-card">
+                <div className="login-visual">
+                    <div className="login-visual-overlay">
+                        <Link to="/home" className="login-brand">
+                            <img src="/logo.jpg" alt="Evento" className="login-brand-logo" />
+                            <span>Evento</span>
+                        </Link>
+
+                        <ul className="login-feature-list">
+                            <li><i className="bi bi-check-circle-fill"></i> Book weddings, birthdays & more in minutes</li>
+                            <li><i className="bi bi-check-circle-fill"></i> Track every booking in one place</li>
+                            <li><i className="bi bi-check-circle-fill"></i> Save your favorite events for later</li>
+                        </ul>
+
+                        <div>
+                            <h2>Start Planning Your Perfect Event</h2>
+                            <p>Create an account to book, track, and manage every celebration with Evento.</p>
                         </div>
-                        <div className="mb-3 text-start">
-                            <label htmlFor="exampleInputEmail1" className="form-label">
-                                <strong>Email Id</strong>
-                            </label>
-                            <input 
-                                type="email" 
-                                placeholder="Enter Email"
-                                className="form-control" 
-                                id="exampleInputEmail1" 
-                                onChange={(event) => setEmail(event.target.value)}
-                                required
-                            /> 
+                    </div>
+                </div>
+
+                <div className="login-form-panel">
+                    <h2 className="login-heading">Create Your Account</h2>
+                    <p className="login-subheading">Join Evento and start planning your next celebration</p>
+
+                    <form onSubmit={handleSubmit} className="login-form">
+                        <div className="login-field">
+                            <label htmlFor="registerName">Full Name</label>
+                            <div className="login-input-group">
+                                <i className="bi bi-person login-input-icon"></i>
+                                <input
+                                    type="text"
+                                    placeholder="Enter Name"
+                                    id="registerName"
+                                    onChange={(event) => setName(event.target.value)}
+                                    required
+                                />
+                            </div>
                         </div>
-                        <div className="mb-3 text-start">
-                            <label htmlFor="exampleInputPassword1" className="form-label">
-                                <strong>Password</strong>
-                            </label>
-                            <input 
-                                type="password" 
-                                placeholder="Enter Password"
-                                className="form-control" 
-                                id="exampleInputPassword1" 
-                                onChange={(event) => setPassword(event.target.value)}
-                                required
-                            />
+
+                        <div className="login-field">
+                            <label htmlFor="registerEmail">Email Id</label>
+                            <div className="login-input-group">
+                                <i className="bi bi-envelope login-input-icon"></i>
+                                <input
+                                    type="email"
+                                    placeholder="Enter Email"
+                                    id="registerEmail"
+                                    onChange={(event) => setEmail(event.target.value)}
+                                    required
+                                />
+                            </div>
                         </div>
-                        <button type="submit" className="btn btn-primary" disabled={submitting}>
+
+                        <div className="login-field">
+                            <label htmlFor="registerPassword">Password</label>
+                            <div className="login-input-group">
+                                <i className="bi bi-lock login-input-icon"></i>
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    placeholder="Enter Password"
+                                    id="registerPassword"
+                                    onChange={(event) => setPassword(event.target.value)}
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    className="login-password-toggle"
+                                    onClick={() => setShowPassword((show) => !show)}
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                >
+                                    <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" className="btn btn-primary login-submit" disabled={submitting}>
                             {submitting ? 'Registering...' : 'Register'}
                         </button>
                     </form>
 
-                    <div className="d-flex justify-content-center my-3">
-                        <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => toast.error('Google sign-in failed.')} />
+                    <div className="login-divider">
+                        <span>or continue with</span>
                     </div>
 
-                <p className='container my-2'>Already have an account ?</p>
-                <Link to='/login' className="btn btn-secondary">Login</Link>
+                    <div className="login-google">
+                        <GoogleLogin
+                            onSuccess={handleGoogleSuccess}
+                            onError={() => toast.error('Google sign-in failed.')}
+                            shape="pill"
+                            size="large"
+                            width="340"
+                        />
+                    </div>
+
+                    <p className="login-register-prompt">
+                        Already have an account? <Link to="/login">Login</Link>
+                    </p>
+                </div>
             </div>
         </div>
     )

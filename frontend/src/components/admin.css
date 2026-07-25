@@ -41,6 +41,22 @@
     box-shadow: var(--shadow-sm);
 }
 
+.admin-final-amount-editor {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.admin-final-amount-editor input {
+    width: 90px;
+}
+
+.admin-final-amount-paid {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #1f7a4d;
+}
+
 .admin-events-table {
     width: 100%;
     border-collapse: collapse;
@@ -217,4 +233,111 @@
 .admin-review-comment {
     max-width: 260px;
     white-space: normal;
+}
+
+.admin-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.admin-status-badge.is-upcoming {
+    background: rgba(91, 33, 182, 0.12);
+    color: var(--color-primary);
+}
+
+.admin-status-badge.is-completed {
+    background: rgba(34, 139, 87, 0.14);
+    color: #1f7a4d;
+}
+
+.admin-status-badge.is-waitlisted {
+    background: rgba(217, 140, 15, 0.16);
+    color: var(--color-accent-dark);
+}
+
+.admin-status-none {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
+.admin-reviews-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.admin-reviews-header h2 {
+    margin-bottom: 0;
+}
+
+.admin-reviews-controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.admin-reviews-controls .form-select {
+    width: auto;
+}
+
+.admin-flaws-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.admin-review-flagged {
+    background: rgba(220, 53, 69, 0.08);
+}
+
+.admin-review-search {
+    width: 200px;
+}
+
+.admin-flaw-indicator {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #dc3545;
+}
+
+.admin-bar-rating {
+    background: var(--color-accent-dark, #b5820b);
+}
+
+.admin-review-flag-badge {
+    margin-left: 8px;
+}
+
+.admin-review-reply-preview {
+    margin: 6px 0 0;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+.admin-review-reply-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 4px;
+}
+
+.admin-review-reply-actions {
+    display: flex;
+    gap: 8px;
 }

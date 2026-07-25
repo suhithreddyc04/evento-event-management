@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import Header from './header';
 import Skeleton from './Skeleton.jsx';
 import EventCard from './EventCard.jsx';
+import { Reveal } from './Reveal.jsx';
 import api from '../api';
 import { useAuth } from '../AuthContext';
 import './category.css';
@@ -35,21 +37,41 @@ const Favorites = () => {
         <div>
             <Header />
             <section className="events-section">
-                <h1>My Favorites</h1>
+                <Reveal><h1>My Favorites</h1></Reveal>
 
-                {loading ? (
-                    <Skeleton count={3} />
-                ) : events.length > 0 ? (
-                    <div className="events-gallery">
-                        {events.map((event) => (
-                            <EventCard key={event._id} event={event} onFavoriteChange={handleFavoriteChange} />
-                        ))}
-                    </div>
-                ) : (
-                    <p>
-                        You haven't saved any events yet. <Link to="/events">Browse events</Link> to find some you love.
-                    </p>
-                )}
+                <AnimatePresence mode="wait">
+                    {loading ? (
+                        <motion.div key="loading" exit={{ opacity: 0 }}>
+                            <Skeleton count={3} />
+                        </motion.div>
+                    ) : events.length > 0 ? (
+                        <motion.div key="results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+                            <motion.div className="events-gallery" layout>
+                                <AnimatePresence>
+                                    {events.map((event) => (
+                                        <motion.div
+                                            key={event._id}
+                                            layout
+                                            initial={{ opacity: 0, y: 16 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.85 }}
+                                            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                                        >
+                                            <EventCard event={event} onFavoriteChange={handleFavoriteChange} />
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
+                            </motion.div>
+                        </motion.div>
+                    ) : (
+                        <motion.div key="empty" className="empty-state" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                            <i className="bi bi-heart"></i>
+                            <h3>No favorites yet</h3>
+                            <p>Save events you love and they'll show up here for quick access later.</p>
+                            <Link to="/events" className="btn btn-primary">Browse Events</Link>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </section>
         </div>
     );

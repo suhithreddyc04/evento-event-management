@@ -1,0 +1,172 @@
+.dtp-wrapper {
+    position: relative;
+}
+
+.dtp-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.95rem;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dtp-trigger:hover,
+.dtp-trigger:focus {
+    border-color: var(--color-primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.12);
+}
+
+.dtp-trigger i {
+    color: var(--color-primary);
+}
+
+.dtp-trigger.dtp-placeholder {
+    color: var(--color-text-muted);
+}
+
+.dtp-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 300;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 14px;
+    width: 280px;
+}
+
+.dtp-cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+
+.dtp-cal-header button {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 50%;
+}
+
+.dtp-cal-header button:hover {
+    background: var(--color-bg);
+}
+
+.dtp-cal-title {
+    font-weight: 700;
+    font-family: var(--font-heading);
+    color: var(--color-text);
+    display: inline-block;
+}
+
+.dtp-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.dtp-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.dtp-cell {
+    position: relative;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    font-size: 0.88rem;
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.dtp-cell:disabled {
+    color: var(--color-border);
+    cursor: not-allowed;
+}
+
+.dtp-cell-blank {
+    cursor: default;
+}
+
+.dtp-cell.is-today .dtp-cell-label {
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.dtp-cell.is-selected .dtp-cell-label {
+    color: #fff;
+}
+
+.dtp-cell-label {
+    position: relative;
+    z-index: 1;
+}
+
+.dtp-cell-highlight {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--color-primary);
+}
+
+.dtp-time-popover {
+    width: 180px;
+    padding: 8px;
+}
+
+.dtp-time-list {
+    max-height: 260px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dtp-time-slot {
+    position: relative;
+    padding: 9px 12px;
+    background: none;
+    border: none;
+    border-radius: var(--radius-md);
+    text-align: left;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.dtp-time-slot.is-selected {
+    color: #fff;
+    font-weight: 600;
+}
+
+.dtp-time-slot .dtp-cell-highlight {
+    border-radius: var(--radius-md);
+}

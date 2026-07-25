@@ -1,21 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import Header from './header';
 import Skeleton from './Skeleton.jsx';
 import EventCard from './EventCard.jsx';
 import EventFilters from './EventFilters.jsx';
+import { Reveal, StaggerGroup, StaggerItem } from './Reveal.jsx';
 import useEvents from '../hooks/useEvents';
+import { getCategory } from '../categories';
 import './category.css';
-
-const categoryDescriptions = {
-    wedding: 'Celebrate your love with memorable weddings at exquisite venues, tailored for your perfect day.',
-    corporate: 'Host professional and impactful corporate events with state-of-the-art facilities and services.',
-    birthday: 'Make birthdays unforgettable with vibrant themes, fun activities, and delightful surprises.',
-    reunion: 'Reconnect with loved ones in heartwarming family reunions at beautiful destinations.',
-};
 
 const CategoryEvents = () => {
     const { categoryId } = useParams();
+    const category = getCategory(categoryId);
     const [minRating, setMinRating] = useState('');
     const [sort, setSort] = useState('');
     const { events, loading, loadingMore, hasMore, error, loadMore } = useEvents({ category: categoryId, minRating, sort });
@@ -40,33 +37,41 @@ const CategoryEvents = () => {
         <div>
             <Header />
             <section className="events-section">
-                <h1>{categoryId.charAt(0).toUpperCase() + categoryId.slice(1)} Events</h1>
-                <p className="category-description">
-                    {categoryDescriptions[categoryId] || 'Explore our events and find the perfect one for your needs.'}
-                </p>
+                <Reveal>
+                    <h1>{category?.name || 'Events'}</h1>
+                    <p className="category-description">
+                        {category?.description || 'Explore our events and find the perfect one for your needs.'}
+                    </p>
+                </Reveal>
                 <EventFilters
                     minRating={minRating}
                     onMinRatingChange={setMinRating}
                     sort={sort}
                     onSortChange={setSort}
                 />
-                {loading ? (
-                    <Skeleton count={3} />
-                ) : error ? (
-                    <p>{error}</p>
-                ) : events.length > 0 ? (
-                    <>
-                        <div className="events-gallery">
-                            {events.map((event) => (
-                                <EventCard key={event._id} event={event} />
-                            ))}
-                        </div>
-                        {hasMore && <div ref={observerCallback} className="events-scroll-sentinel" />}
-                        {loadingMore && <Skeleton count={3} />}
-                    </>
-                ) : (
-                    <p>No events available in this category.</p>
-                )}
+                <AnimatePresence mode="wait">
+                    {loading ? (
+                        <motion.div key="loading" exit={{ opacity: 0 }}>
+                            <Skeleton count={3} />
+                        </motion.div>
+                    ) : error ? (
+                        <motion.p key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{error}</motion.p>
+                    ) : events.length > 0 ? (
+                        <motion.div key="results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+                            <StaggerGroup className="events-gallery">
+                                {events.map((event) => (
+                                    <StaggerItem key={event._id}>
+                                        <EventCard event={event} />
+                                    </StaggerItem>
+                                ))}
+                            </StaggerGroup>
+                            {hasMore && <div ref={observerCallback} className="events-scroll-sentinel" />}
+                            {loadingMore && <Skeleton count={3} />}
+                        </motion.div>
+                    ) : (
+                        <motion.p key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>No events available in this category.</motion.p>
+                    )}
+                </AnimatePresence>
             </section>
         </div>
     );

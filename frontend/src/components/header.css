@@ -15,6 +15,35 @@
 .header-left {
     display: flex;
     align-items: center;
+    gap: 0.6rem;
+}
+
+.header-back-button {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.3rem;
+    line-height: 1;
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    border-radius: 50%;
+    transition: background-color 0.15s ease, color 0.2s ease;
+}
+
+.header-back-button:hover,
+.header-back-button:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    outline: none;
+}
+
+.header-logo-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    cursor: pointer;
 }
 
 .header-logo {
@@ -72,6 +101,28 @@
     width: 100%;
 }
 
+.header-theme-toggle {
+    background: rgba(255, 255, 255, 0.14);
+    border: none;
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.header-theme-toggle:hover,
+.header-theme-toggle:focus {
+    background: rgba(255, 255, 255, 0.26);
+    transform: rotate(15deg);
+    outline: none;
+}
+
 .header-button {
     background-color: var(--color-accent);
     color: var(--color-text);
@@ -112,6 +163,14 @@
 .header-profile-toggle:focus {
     color: #fff;
     outline: none;
+}
+
+.header-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.7);
 }
 
 .header-profile-menu {

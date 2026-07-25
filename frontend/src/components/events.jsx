@@ -1,37 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import Header from './header';
 import Skeleton from './Skeleton.jsx';
 import EventCard from './EventCard.jsx';
 import EventFilters from './EventFilters.jsx';
+import { Reveal, StaggerGroup, StaggerItem } from './Reveal.jsx';
 import useEvents from '../hooks/useEvents';
+import { CATEGORIES } from '../categories';
 import './events.css';
 import './category.css';
 
-const categories = [
-    {
-        id: 'wedding',
-        name: 'Weddings',
-        imageUrl: '/images/m2.jpg',
-    },
-    {
-        id: 'corporate',
-        name: 'Corporate Events',
-        imageUrl: '/images/ce2.jpg',
-    },
-    {
-        id: 'birthday',
-        name: 'Birthdays',
-        imageUrl: '/images/b2.jpg',
-    },
-    {
-        id: 'reunion',
-        name: 'Reunions',
-        imageUrl: '/images/g2.jpg',
-    },
-];
-
 const Events = () => {
+    const navigate = useNavigate();
     const [search, setSearch] = useState('');
     const [query, setQuery] = useState('');
 
@@ -69,7 +50,13 @@ const Events = () => {
         <div>
             <Header />
             <section className="events-categories-section">
-                <h1>Event Categories</h1>
+                <Reveal>
+                    <h1>Event Categories</h1>
+                    <p className="events-categories-intro">
+                        From dream weddings to milestone birthdays and flawless corporate events —
+                        browse by category below, or search for something specific.
+                    </p>
+                </Reveal>
 
                 <div className="events-search">
                     <input
@@ -90,32 +77,52 @@ const Events = () => {
                             sort={sort}
                             onSortChange={setSort}
                         />
-                        {loading ? (
-                            <Skeleton count={3} />
-                        ) : results.length > 0 ? (
-                            <>
-                                <div className="events-gallery">
-                                    {results.map((event) => (
-                                        <EventCard key={event._id} event={event} />
-                                    ))}
-                                </div>
-                                {hasMore && <div ref={observerCallback} className="events-scroll-sentinel" />}
-                                {loadingMore && <Skeleton count={3} />}
-                            </>
-                        ) : (
-                            <p>No events match "{query}".</p>
-                        )}
+                        <AnimatePresence mode="wait">
+                            {loading ? (
+                                <motion.div key="loading" exit={{ opacity: 0 }}>
+                                    <Skeleton count={3} />
+                                </motion.div>
+                            ) : results.length > 0 ? (
+                                <motion.div key="results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+                                    <StaggerGroup className="events-gallery">
+                                        {results.map((event) => (
+                                            <StaggerItem key={event._id}>
+                                                <EventCard event={event} />
+                                            </StaggerItem>
+                                        ))}
+                                    </StaggerGroup>
+                                    {hasMore && <div ref={observerCallback} className="events-scroll-sentinel" />}
+                                    {loadingMore && <Skeleton count={3} />}
+                                </motion.div>
+                            ) : (
+                                <motion.p key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>No events match "{query}".</motion.p>
+                            )}
+                        </AnimatePresence>
                     </div>
                 ) : (
-                    <div className="categories-list">
-                        {categories.map((category) => (
-                            <div key={category.id} className="category-card">
-                                <img
-                                    src={category.imageUrl}
-                                    alt={`${category.name} category`}
-                                    className="category-image"
-                                    loading="lazy"
-                                />
+                    <StaggerGroup className="categories-list">
+                        {CATEGORIES.map((category) => (
+                            <StaggerItem
+                                key={category.id}
+                                className="category-card"
+                                onClick={() => navigate(`/category/${category.id}`)}
+                                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/category/${category.id}`)}
+                                role="button"
+                                tabIndex={0}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                {category.imageUrl ? (
+                                    <img
+                                        src={category.imageUrl}
+                                        alt={`${category.name} category`}
+                                        className="category-image"
+                                        loading="lazy"
+                                    />
+                                ) : (
+                                    <div className="category-image category-image-icon">
+                                        <i className={`bi ${category.icon}`}></i>
+                                    </div>
+                                )}
                                 <h2>{category.name}</h2>
                                 <Link
                                     to={`/category/${category.id}`}
@@ -124,9 +131,9 @@ const Events = () => {
                                 >
                                     View {category.name}
                                 </Link>
-                            </div>
+                            </StaggerItem>
                         ))}
-                    </div>
+                    </StaggerGroup>
                 )}
             </section>
         </div>

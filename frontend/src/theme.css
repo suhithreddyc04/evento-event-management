@@ -16,19 +16,46 @@
 
     --radius-md: 12px;
     --radius-lg: 18px;
-    --shadow-sm: 0 2px 8px rgba(36, 27, 58, 0.08);
-    --shadow-md: 0 8px 24px rgba(36, 27, 58, 0.12);
-    --shadow-lg: 0 16px 40px rgba(36, 27, 58, 0.18);
+    --shadow-sm: 0 2px 8px rgba(91, 33, 182, 0.10);
+    --shadow-md: 0 8px 24px rgba(91, 33, 182, 0.16);
+    --shadow-lg: 0 16px 40px rgba(91, 33, 182, 0.24);
+}
+
+:root[data-theme="dark"] {
+    --color-primary: #8b5cf6;
+    --color-primary-dark: #7c3aed;
+    --color-primary-light: #a78bfa;
+    --color-accent: #f7b955;
+    --color-accent-dark: #d98c0f;
+    --color-bg: #17131f;
+    --color-surface: #241d33;
+    --color-text: #f1eef7;
+    --color-text-muted: #a89fc2;
+    --color-border: #3a3150;
+
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
 }
 
 * {
     box-sizing: border-box;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 html, body {
-    background-color: var(--color-bg);
+    background: linear-gradient(160deg, #f5f1fc 0%, var(--color-bg) 35%, #fdf5ea 100%);
     color: var(--color-text);
     font-family: var(--font-body);
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+:root[data-theme="dark"],
+:root[data-theme="dark"] body {
+    background: linear-gradient(160deg, #1c1729 0%, var(--color-bg) 35%, #1a1620 100%);
 }
 
 h1, h2, h3 {
@@ -37,6 +64,16 @@ h1, h2, h3 {
 
 a {
     color: var(--color-primary);
+    transition: color 0.2s ease;
+}
+
+/* Respect users who've asked their OS for reduced motion — large-scale
+   page/scroll animations are disabled, but this doesn't touch framer-motion
+   itself (React components), only the plain-CSS transitions/scroll here. */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
 }
 
 /* Brand the Bootstrap buttons the rest of the app already uses,
@@ -50,6 +87,16 @@ a {
     --bs-btn-active-border-color: var(--color-primary-dark);
     --bs-btn-disabled-bg: var(--color-primary);
     --bs-btn-disabled-border-color: var(--color-primary);
+    background: linear-gradient(120deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    border: none;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled),
+.btn-primary:focus:not(:disabled) {
+    background: linear-gradient(120deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
 }
 
 .btn-secondary {
@@ -95,6 +142,31 @@ a {
 
 .auth-card h2 {
     color: var(--color-primary);
+}
+
+/* Friendly empty-state block reused across My Bookings, Favorites, and
+   anywhere else a list can legitimately be empty — icon + heading + a CTA
+   back into the browsing flow, instead of a bare line of text. */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: var(--color-text-muted);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: var(--color-border);
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.empty-state h3 {
+    color: var(--color-text);
+    margin-bottom: 8px;
+}
+
+.empty-state p {
+    margin-bottom: 1.25rem;
 }
 
 /* For logged-in-only pages that still want the same centered card look,

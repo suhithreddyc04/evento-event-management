@@ -18,7 +18,7 @@ const LocationAutocomplete = ({ value, onChange, placeholder }) => {
 
         setLoading(true);
         const timeoutId = setTimeout(() => {
-            fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(trimmed)}`)
+            fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=in&q=${encodeURIComponent(trimmed)}`)
                 .then(res => res.json())
                 .then(results => setSuggestions(results))
                 .catch(() => setSuggestions([]))

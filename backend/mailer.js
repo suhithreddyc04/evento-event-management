@@ -39,13 +39,57 @@ const sendBookingConfirmationEmail = (toEmail, event, date, details, specialRequ
         to: toEmail,
         subject: `Booking confirmed: ${event.name}`,
         html: `
-            <p>Your booking for <strong>${event.name}</strong> is confirmed.</p>
-            <p><strong>Requested date:</strong> ${new Date(date).toLocaleDateString()}</p>
+            <p>Thank you! Your booking for <strong>${event.name}</strong> is confirmed.</p>
+            <p><strong>Requested date:</strong> ${new Date(date).toLocaleString()}</p>
             ${detailRows ? `<ul>${detailRows}</ul>` : ''}
             ${specialRequests ? `<p><strong>Special requests:</strong> ${specialRequests}</p>` : ''}
-            <p>We'll be in touch soon with more details. Thanks for booking with Evento!</p>
+            <p>We'll be in touch soon with more details. Thanks for choosing Evento!</p>
         `,
     });
 };
 
-module.exports = { sendResetPasswordEmail, sendBookingConfirmationEmail };
+const sendWaitlistPromotedEmail = (toEmail, event, date) => {
+    return getTransporter().sendMail({
+        from: `"Evento" <${process.env.EMAIL_USER}>`,
+        to: toEmail,
+        subject: `A spot opened up: ${event.name}`,
+        html: `
+            <p>Good news! A spot opened up for <strong>${event.name}</strong> and your waitlisted booking is now confirmed.</p>
+            <p><strong>Requested date:</strong> ${new Date(date).toLocaleString()}</p>
+            <p>We'll be in touch soon with more details. Thanks for choosing Evento!</p>
+        `,
+    });
+};
+
+const sendWaitlistPaymentRequiredEmail = (toEmail, event, date) => {
+    return getTransporter().sendMail({
+        from: `"Evento" <${process.env.EMAIL_USER}>`,
+        to: toEmail,
+        subject: `A spot opened up: ${event.name} — payment required`,
+        html: `
+            <p>Good news! A spot opened up for <strong>${event.name}</strong>.</p>
+            <p><strong>Requested date:</strong> ${new Date(date).toLocaleString()}</p>
+            <p>Complete the advance payment from your <strong>My Bookings</strong> page to confirm your spot before it's offered to someone else.</p>
+        `,
+    });
+};
+
+const sendBookingReminderEmail = (toEmail, event, date) => {
+    return getTransporter().sendMail({
+        from: `"Evento" <${process.env.EMAIL_USER}>`,
+        to: toEmail,
+        subject: `Reminder: ${event.name} is coming up`,
+        html: `
+            <p>This is a friendly reminder that <strong>${event.name}</strong> is scheduled for <strong>${new Date(date).toLocaleString()}</strong>.</p>
+            <p>We're looking forward to it! Reach out if anything has changed.</p>
+        `,
+    });
+};
+
+module.exports = {
+    sendResetPasswordEmail,
+    sendBookingConfirmationEmail,
+    sendWaitlistPromotedEmail,
+    sendWaitlistPaymentRequiredEmail,
+    sendBookingReminderEmail,
+};

@@ -11,6 +11,9 @@ const EventSchema = new mongoose.Schema({
     decorations: String,
     games: String,
     capacity: { type: Number, default: null }, // null = unlimited
+    price: { type: Number, default: null }, // null = contact for pricing
+    advanceAmount: { type: Number, default: null }, // null = no advance payment required to book
+    completed: { type: Boolean, default: false }, // reviews only open once true
 });
 
 const EventModel = mongoose.model('Event', EventSchema);

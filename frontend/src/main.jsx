@@ -6,15 +6,18 @@ import './theme.css'
 import App from './components/App'
 import { AuthProvider } from './AuthContext'
 import { ToastProvider } from './ToastContext'
+import { ThemeProvider } from './ThemeContext'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-      <ToastProvider>
-        <AuthProvider>
-          <App/>
-        </AuthProvider>
-      </ToastProvider>
-    </GoogleOAuthProvider>
+    <ThemeProvider>
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+        <ToastProvider>
+          <AuthProvider>
+            <App/>
+          </AuthProvider>
+        </ToastProvider>
+      </GoogleOAuthProvider>
+    </ThemeProvider>
   </React.StrictMode>
 )
