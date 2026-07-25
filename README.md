@@ -95,3 +95,81 @@ The frontend reads two build-time variables (set as a local `.env` for `vite dev
 ## CI
 
 GitHub Actions ([.github/workflows/ci-cd.yml](.github/workflows/ci-cd.yml)) lints and builds the frontend and installs/tests the backend on every push and pull request to `master`. Actual deployment is handled separately by Render's and Vercel's own GitHub integrations.
+
+## API Overview
+
+All routes are relative to the backend base URL. Routes marked 🔒 require a JWT (`Authorization: Bearer <token>`); 🔒👑 require an admin account.
+
+<details>
+<summary>Auth & Profile</summary>
+
+| Method | Route | Description |
+|---|---|---|
+| POST | `/register` | Create an account |
+| POST | `/login` | Email/password login |
+| POST | `/auth/google` | Google Sign-In |
+| POST | `/forgot-password` | Email a password reset link |
+| POST | `/reset-password/:token` | Complete a password reset |
+| PUT | `/change-password` 🔒 | Change password while logged in |
+| GET | `/profile` 🔒 | Get current user's profile |
+| PUT | `/profile` 🔒 | Update name/email |
+| POST | `/profile/avatar` 🔒 | Upload profile avatar |
+| DELETE | `/profile/avatar` 🔒 | Remove profile avatar |
+
+</details>
+
+<details>
+<summary>Events & Favorites</summary>
+
+| Method | Route | Description |
+|---|---|---|
+| GET | `/events` | List events — pagination, search, rating filter, sort |
+| GET | `/events/:id` | Event details |
+| GET | `/events/:id/reviews` | List an event's reviews |
+| POST | `/events/:id/reviews` 🔒 | Leave/update a review (must have booked, and paid in full if priced) |
+| DELETE | `/reviews/:id` 🔒 | Delete own review (or any, if admin) |
+| POST | `/favorites/:eventId` 🔒 | Add to favorites |
+| DELETE | `/favorites/:eventId` 🔒 | Remove from favorites |
+| GET | `/favorites/mine` 🔒 | List current user's favorites |
+
+</details>
+
+<details>
+<summary>Bookings & Payments</summary>
+
+| Method | Route | Description |
+|---|---|---|
+| POST | `/bookings` 🔒 | Book an event (confirmed / waitlisted / pending_payment) |
+| GET | `/bookings/mine` 🔒 | Current user's booking history |
+| DELETE | `/bookings/:id` 🔒 | Cancel a booking (promotes next waitlisted booking) |
+| POST | `/payments/create-order` 🔒 | Create a Razorpay order for a booking's advance |
+| POST | `/payments/verify` 🔒 | Verify advance payment signature, confirm booking |
+| POST | `/payments/final/create-order` 🔒 | Create a Razorpay order for the remaining balance |
+| POST | `/payments/final/verify` 🔒 | Verify final payment signature |
+| POST | `/webhooks/razorpay` | Razorpay webhook — signature-verified fallback confirmation |
+
+</details>
+
+<details>
+<summary>Admin</summary>
+
+| Method | Route | Description |
+|---|---|---|
+| POST | `/admin/upload` 🔒👑 | Upload an image (Cloudinary) |
+| POST | `/admin/events` 🔒👑 | Create an event |
+| PUT | `/admin/events/:id` 🔒👑 | Update an event |
+| DELETE | `/admin/events/:id` 🔒👑 | Delete an event |
+| PUT | `/admin/events/:id/complete` 🔒👑 | Toggle an event's Completed status |
+| GET | `/admin/bookings` 🔒👑 | All bookings, filterable by event |
+| PUT | `/admin/bookings/:id/final-amount` 🔒👑 | Override a booking's final balance owed |
+| GET | `/admin/analytics` 🔒👑 | Totals, booking trend, rating trend, top-rated events |
+| GET | `/admin/reviews` 🔒👑 | All reviews, for moderation |
+| PATCH | `/admin/reviews/:id/flag` 🔒👑 | Flag/unflag a review |
+| POST | `/admin/reviews/:id/reply` 🔒👑 | Post a public admin reply to a review |
+| GET | `/admin/customers` 🔒👑 | Repeat customers (2+ bookings) |
+
+</details>
+
+## License
+
+MIT — see [LICENSE](LICENSE).
