@@ -1,4 +1,3 @@
-import React from 'react';
 
 const StarRating = ({ value = 0, onChange, readOnly = true }) => {
     const stars = [1, 2, 3, 4, 5];

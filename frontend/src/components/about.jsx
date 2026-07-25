@@ -1,4 +1,3 @@
-import React from 'react';
 import Header from './header.jsx';
 import { Reveal, StaggerGroup, StaggerItem } from './Reveal.jsx';
 import { CATEGORIES } from '../categories';

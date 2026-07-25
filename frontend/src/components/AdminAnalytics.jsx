@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 import { useToast } from '../ToastContext';
@@ -262,7 +262,7 @@ const AdminAnalytics = () => {
                         </thead>
                         <tbody>
                             {displayedReviews.map((review) => (
-                                <React.Fragment key={review._id}>
+                                <Fragment key={review._id}>
                                     <tr className={review.rating <= 2 ? 'admin-review-flagged' : ''}>
                                         <td>{review.event?.name || 'Deleted event'}</td>
                                         <td>{review.name}</td>
@@ -333,7 +333,7 @@ const AdminAnalytics = () => {
                                             </td>
                                         </tr>
                                     )}
-                                </React.Fragment>
+                                </Fragment>
                             ))}
                         </tbody>
                     </table>

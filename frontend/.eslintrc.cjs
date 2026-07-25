@@ -16,5 +16,8 @@ module.exports = {
       'warn',
       { allowConstantExport: true },
     ],
+    // No PropTypes package in this project — not enforced.
+    'react/prop-types': 'off',
+    'react/no-unescaped-entities': 'off',
   },
 }

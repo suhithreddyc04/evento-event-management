@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { animate, useInView } from 'framer-motion';
 
 // Animates "500+" / "12+" / "6" style stat strings by counting the numeric

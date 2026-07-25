@@ -1,4 +1,3 @@
-import React from 'react';
 import './EventFilters.css';
 
 const EventFilters = ({ minRating, onMinRatingChange, sort, onSortChange }) => (

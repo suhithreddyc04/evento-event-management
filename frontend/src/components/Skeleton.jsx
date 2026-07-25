@@ -1,4 +1,3 @@
-import React from 'react';
 import './skeleton.css';
 
 // Renders `count` placeholder cards shaped like an event/category card, shown while data loads.

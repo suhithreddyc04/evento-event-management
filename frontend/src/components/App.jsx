@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import './App.css';
 import Event from './events.jsx';
 import Home from './Home.jsx';
