@@ -1,61 +1,97 @@
-# Login & Registration Form with MERN stack
+# Evento — Event Planning & Booking Platform
 
-## 👋 Introduction
+Evento is a full-stack MERN app for browsing event packages (weddings, birthdays, corporate events, and more), booking them online, and managing the whole lifecycle — waitlists, payments, reviews, and admin analytics — from a single dashboard.
 
-Responsive user Registration and Login (SignIn & SignUp) Form functionality using React, NodeJS, ExpressJS and MongoDB and Bootstrap.
+**Live app:** https://evento-event-management-chi.vercel.app
+**Live API:** https://evento-backend-se2f.onrender.com
 
+> The backend runs on Render's free tier and sleeps after ~15 minutes of inactivity — the first request after that can take 30-50 seconds to wake up. That's expected, not a bug.
 
-![Screenshot (219)](https://github.com/AkshataGanbote/Registration_Login_Form_MERN_Stack/assets/117456092/442bbe2d-cda7-4d5c-a156-9e9cc9b3f108)
+## Features
 
-![Screenshot (220)](https://github.com/AkshataGanbote/Registration_Login_Form_MERN_Stack/assets/117456092/01b04452-4e8b-4a24-b680-28c93f2c7550)
+See [FEATURES.md](FEATURES.md) for the full, running list. Highlights:
 
+- Email/password auth + Google Sign-In, JWT sessions, profile with avatar upload
+- Event browsing with pagination, search, filters, sorting, and an interactive map (Leaflet + OpenStreetMap, no API key needed)
+- Booking flow with per-category custom fields, animated date/time pickers, and an automatic waitlist system
+- Per-event pricing with Razorpay advance/final payment flow, signature-verified server-side and backed by a webhook
+- Star ratings & reviews, gated behind event completion (and full payment, for priced events)
+- Admin panel: manage events, manage bookings, and an analytics dashboard (booking trends, rating trends, review moderation, repeat customers)
+- Scheduled background jobs for booking reminders and auto-completing past events
+- Dark mode, toast notifications, and animated page transitions throughout
 
-## ❓Requirements
+## Tech Stack
 
-Before going forward you must have **Node js** installed on your machine.  
-Go to the link below for installation if you don't have installed yet.
+**Frontend:** React 18, Vite, React Router, Framer Motion, Bootstrap, Leaflet/React-Leaflet, Axios
+**Backend:** Node.js, Express, Mongoose (MongoDB), JWT, bcrypt, Multer + Cloudinary, Nodemailer, Razorpay, Google Auth Library
+**Infra:** MongoDB Atlas · Render (backend) · Vercel (frontend) · GitHub Actions (CI)
 
-- [Node js](https://nodejs.org/en/download)
+## Project Structure
 
+```
+EVENTO/
+├── backend/   Express API, Mongoose models, scheduled jobs
+└── frontend/  React + Vite app
+```
 
-## ⚙️ Installation & Getting started :
+## Requirements
 
-1. Download the repository
+- [Node.js](https://nodejs.org/en/download) 18+
+- A MongoDB connection string (local or [MongoDB Atlas](https://www.mongodb.com/cloud/atlas))
 
-2. Unzip folder and open it with [VS Code](https://code.visualstudio.com/)
+## Local Setup
 
-- <h3> Frontend
+### Backend
 
-1. Open terminal & go to `cd frontend`
+```bash
+cd backend
+npm install
+cp .env.example .env   # then fill in your own values, see below
+npm start
+```
 
-2. Install dependencies by running `npm install` command
+Runs on `http://localhost:3001`.
 
-3. Run the command `npm run dev` to start live server
+### Frontend
 
-4. Click on `http://localhost:5173/`
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-- <h3>Backend
+Runs on `http://localhost:5173`.
 
-1. Open terminal & go to `cd backend` 
+## Environment Variables
 
-2. install dependencies by running `npm install` command
+Copy `backend/.env.example` to `backend/.env` and fill in your own values:
 
-3. Run the command `npm start` or `nodemon index.js` to start live server on database
+| Variable | Purpose |
+|---|---|
+| `PORT` | Backend port (defaults to `3001`) |
+| `MONGO_URI` | MongoDB connection string |
+| `JWT_SECRET` | Secret used to sign auth tokens |
+| `CLIENT_URL` | Frontend origin, used for CORS and links in emails |
+| `EMAIL_USER` / `EMAIL_PASS` | Gmail address + [app password](https://myaccount.google.com/apppasswords) used to send transactional emails |
+| `ADMIN_EMAILS` | Comma-separated allowlist — accounts logging in with these emails become admins |
+| `GOOGLE_CLIENT_ID` | OAuth client ID for Google Sign-In |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Image uploads (event images, avatars) |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Payment processing (optional — payment routes return 503 if unset) |
+| `RAZORPAY_WEBHOOK_SECRET` | Verifies incoming Razorpay webhook signatures |
 
+The frontend reads two build-time variables (set as a local `.env` for `vite dev`, or as project env vars on your hosting provider):
 
-- Congratulation 🎉 you have setup the environment successfully
+| Variable | Purpose |
+|---|---|
+| `VITE_API_URL` | Base URL of the backend API (falls back to `http://localhost:3001`) |
+| `VITE_GOOGLE_CLIENT_ID` | Same Google OAuth client ID as the backend |
 
+## Deployment
 
+- **Frontend** is deployed on [Vercel](https://vercel.com), root directory `frontend`, auto-deploys on every push to `master`.
+- **Backend** is deployed on [Render](https://render.com), auto-deploys on every push to `master`.
+- **Database** is a [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) cluster.
 
-## 🛠️ Technology Used
+## CI
 
-This project uses the following technologies:
-
-- [React](https://reactjs.org) and [React Router](https://reacttraining.com/react-router/) for frontend
-- [Express](http://expressjs.com/) and [Node](https://nodejs.org/en/) for the backend
-- [MongoDB](https://www.mongodb.com/) for the database
-- [Bootstrap](https://getbootstrap.com/) for styling
-
-<br/>
-
-<h2> Do not forget to give a star! ⭐🤗 </h2>
+GitHub Actions ([.github/workflows/ci-cd.yml](.github/workflows/ci-cd.yml)) lints and builds the frontend and installs/tests the backend on every push and pull request to `master`. Actual deployment is handled separately by Render's and Vercel's own GitHub integrations.
