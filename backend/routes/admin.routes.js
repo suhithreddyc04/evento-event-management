@@ -1,0 +1,279 @@
+const express = require('express');
+const EventModel = require('../models/Event');
+const BookingModel = require('../models/Booking');
+const ReviewModel = require('../models/Review');
+const FormDataModel = require('../models/FormData');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
+const upload = require('../config/upload');
+const { activateFinalPayments } = require('../services/bookingLifecycle');
+
+const router = express.Router();
+
+// Admin: event management
+
+router.post('/admin/upload', requireAuth, requireAdmin, (req, res) => {
+    upload.single('image')(req, res, (err) => {
+        if (err) return res.status(400).json({ message: err.message || 'Upload failed' });
+        if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+        res.status(201).json({ imageUrl: req.file.path });
+    });
+});
+
+router.post('/admin/events', requireAuth, requireAdmin, (req, res) => {
+    const { name, description, imageUrl, category, location, details, activities, decorations, games, capacity, price, advanceAmount } = req.body;
+
+    if (!name || !description || !imageUrl || !category) {
+        return res.status(400).json({ message: 'name, description, imageUrl and category are required' });
+    }
+
+    const event = new EventModel({
+        name, description, imageUrl, category, location, details, activities, decorations, games,
+        capacity: capacity === '' || capacity == null ? null : Number(capacity),
+        price: price === '' || price == null ? null : Number(price),
+        advanceAmount: advanceAmount === '' || advanceAmount == null ? null : Number(advanceAmount),
+    });
+
+    event.save()
+        .then(saved => res.status(201).json(saved))
+        .catch(() => res.status(500).json({ message: 'Error creating event' }));
+});
+
+router.put('/admin/events/:id', requireAuth, requireAdmin, (req, res) => {
+    const { name, description, imageUrl, category, location, details, activities, decorations, games, capacity, price, advanceAmount } = req.body;
+
+    EventModel.findByIdAndUpdate(
+        req.params.id,
+        {
+            name, description, imageUrl, category, location, details, activities, decorations, games,
+            capacity: capacity === '' || capacity == null ? null : Number(capacity),
+            price: price === '' || price == null ? null : Number(price),
+            advanceAmount: advanceAmount === '' || advanceAmount == null ? null : Number(advanceAmount),
+        },
+        { new: true, runValidators: true }
+    )
+        .then(updated => {
+            if (!updated) return res.status(404).json({ message: 'Event not found' });
+            res.status(200).json(updated);
+        })
+        .catch(() => res.status(500).json({ message: 'Error updating event' }));
+});
+
+router.delete('/admin/events/:id', requireAuth, requireAdmin, (req, res) => {
+    EventModel.findByIdAndDelete(req.params.id)
+        .then(deleted => {
+            if (!deleted) return res.status(404).json({ message: 'Event not found' });
+            // Remove any bookings tied to the deleted event so nothing points at a ghost event.
+            return BookingModel.deleteMany({ event: req.params.id });
+        })
+        .then(() => res.status(200).json({ message: 'Event deleted' }))
+        .catch(() => res.status(500).json({ message: 'Error deleting event' }));
+});
+
+router.put('/admin/events/:id/complete', requireAuth, requireAdmin, (req, res) => {
+    const completed = req.body.completed !== undefined ? !!req.body.completed : true;
+
+    EventModel.findByIdAndUpdate(req.params.id, { completed }, { new: true })
+        .then(updated => {
+            if (!updated) return res.status(404).json({ message: 'Event not found' });
+            res.status(200).json(updated);
+            if (completed) {
+                activateFinalPayments(updated._id).catch(err =>
+                    console.error('Activating final payments failed:', err)
+                );
+            }
+        })
+        .catch(() => res.status(500).json({ message: 'Error updating event' }));
+});
+
+router.get('/admin/bookings', requireAuth, requireAdmin, (req, res) => {
+    const filter = {};
+    if (req.query.eventId) filter.event = req.query.eventId;
+
+    // Default view (no event picked) hides completed events to stay uncluttered,
+    // but picking a specific event — including a completed one — shows all its
+    // bookings, since admins need this to manage final payments after the event.
+    BookingModel.find(filter)
+        .sort({ createdAt: -1 })
+        .populate('event', 'name capacity completed')
+        .then(bookings => res.status(200).json(bookings.filter(booking =>
+            booking.event && (req.query.eventId || !booking.event.completed)
+        )))
+        .catch(() => res.status(500).json({ message: 'Error loading bookings' }));
+});
+
+router.put('/admin/bookings/:id/final-amount', requireAuth, requireAdmin, (req, res) => {
+    const { finalAmount } = req.body;
+    const amount = finalAmount === '' || finalAmount == null ? null : Number(finalAmount);
+
+    if (amount != null && (Number.isNaN(amount) || amount < 0)) {
+        return res.status(400).json({ message: 'finalAmount must be a non-negative number' });
+    }
+
+    BookingModel.findById(req.params.id)
+        .then(booking => {
+            if (!booking) return Promise.reject({ status: 404, message: 'Booking not found' });
+
+            booking.finalAmount = amount;
+            // A positive amount (re)opens it for payment — even if it was already
+            // paid, since the admin adjusting the figure means a new balance is owed.
+            // Clearing the amount waives it.
+            booking.finalPaymentStatus = amount > 0 ? 'pending' : 'not_required';
+
+            // Charging a final amount only makes sense once the event has taken
+            // place, and reviews/booking UI elsewhere key off event.completed —
+            // so requesting a final payment implicitly marks the event completed
+            // too, keeping that flag consistent with the auto-complete flow.
+            if (amount > 0) {
+                return EventModel.findByIdAndUpdate(booking.event, { completed: true })
+                    .then(() => booking.save());
+            }
+            return booking.save();
+        })
+        .then(saved => res.status(200).json(saved))
+        .catch(err => {
+            if (err && err.status) return res.status(err.status).json({ message: err.message });
+            res.status(500).json({ message: 'Could not update final amount' });
+        });
+});
+
+// Admin: analytics
+
+router.get('/admin/analytics', requireAuth, requireAdmin, (req, res) => {
+    const DAYS = 14;
+    const now = new Date();
+    const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (DAYS - 1)));
+
+    Promise.all([
+        EventModel.countDocuments(),
+        BookingModel.countDocuments(),
+        FormDataModel.countDocuments(),
+        ReviewModel.countDocuments(),
+        BookingModel.aggregate([
+            { $match: { createdAt: { $gte: since } } },
+            { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+        ]),
+        ReviewModel.aggregate([
+            { $group: { _id: '$event', avgRating: { $avg: '$rating' }, reviewCount: { $sum: 1 } } },
+            { $sort: { avgRating: -1, reviewCount: -1 } },
+            { $limit: 5 },
+        ]),
+        ReviewModel.find({}, 'rating createdAt').sort({ createdAt: 1 }),
+    ])
+        .then(([totalEvents, totalBookings, totalUsers, totalReviews, bookingRows, topRatedRows, allReviews]) => {
+            const countByDay = new Map(bookingRows.map((row) => [row._id, row.count]));
+            const bookingsByDay = [];
+            for (let i = 0; i < DAYS; i += 1) {
+                const day = new Date(since);
+                day.setUTCDate(day.getUTCDate() + i);
+                const key = day.toISOString().slice(0, 10);
+                bookingsByDay.push({ date: key, count: countByDay.get(key) || 0 });
+            }
+
+            // Cumulative average rating as of each day, so the trend reflects the
+            // platform's overall standing over time rather than a noisy daily average.
+            const ratingTrend = [];
+            let cumulativeSum = 0;
+            let cumulativeCount = 0;
+            let reviewCursor = 0;
+            for (let i = 0; i < DAYS; i += 1) {
+                const day = new Date(since);
+                day.setUTCDate(day.getUTCDate() + i);
+                const dayEnd = new Date(day);
+                dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+                const key = day.toISOString().slice(0, 10);
+
+                while (reviewCursor < allReviews.length && allReviews[reviewCursor].createdAt < dayEnd) {
+                    cumulativeSum += allReviews[reviewCursor].rating;
+                    cumulativeCount += 1;
+                    reviewCursor += 1;
+                }
+
+                ratingTrend.push({
+                    date: key,
+                    avgRating: cumulativeCount > 0 ? Math.round((cumulativeSum / cumulativeCount) * 10) / 10 : null,
+                });
+            }
+
+            return EventModel.find({ _id: { $in: topRatedRows.map((r) => r._id) } })
+                .then(events => {
+                    const eventById = new Map(events.map((e) => [e._id.toString(), e]));
+                    const topRatedEvents = topRatedRows
+                        .map((row) => {
+                            const event = eventById.get(row._id.toString());
+                            if (!event) return null;
+                            return {
+                                _id: event._id,
+                                name: event.name,
+                                imageUrl: event.imageUrl,
+                                avgRating: Math.round(row.avgRating * 10) / 10,
+                                reviewCount: row.reviewCount,
+                            };
+                        })
+                        .filter(Boolean);
+
+                    res.status(200).json({
+                        totalEvents,
+                        totalBookings,
+                        totalUsers,
+                        totalReviews,
+                        bookingsByDay,
+                        topRatedEvents,
+                        ratingTrend,
+                    });
+                });
+        })
+        .catch(() => res.status(500).json({ message: 'Error loading analytics' }));
+});
+
+router.get('/admin/reviews', requireAuth, requireAdmin, (req, res) => {
+    ReviewModel.find()
+        .sort({ createdAt: -1 })
+        .populate('event', 'name')
+        .then(reviews => res.status(200).json(reviews))
+        .catch(() => res.status(500).json({ message: 'Error loading reviews' }));
+});
+
+router.patch('/admin/reviews/:id/flag', requireAuth, requireAdmin, (req, res) => {
+    ReviewModel.findById(req.params.id)
+        .then(review => {
+            if (!review) return Promise.reject({ status: 404, message: 'Review not found' });
+            review.flagged = req.body.flagged !== undefined ? !!req.body.flagged : !review.flagged;
+            return review.save();
+        })
+        .then(review => res.status(200).json(review))
+        .catch(err => res.status(err?.status || 500).json({ message: err?.message || 'Error updating review' }));
+});
+
+router.post('/admin/reviews/:id/reply', requireAuth, requireAdmin, (req, res) => {
+    const text = (req.body.text || '').trim();
+
+    ReviewModel.findById(req.params.id)
+        .then(review => {
+            if (!review) return Promise.reject({ status: 404, message: 'Review not found' });
+            review.adminReply = text ? { text, repliedAt: new Date() } : { text: '', repliedAt: null };
+            return review.save();
+        })
+        .then(review => res.status(200).json(review))
+        .catch(err => res.status(err?.status || 500).json({ message: err?.message || 'Error replying to review' }));
+});
+
+router.get('/admin/customers', requireAuth, requireAdmin, (req, res) => {
+    BookingModel.aggregate([
+        {
+            $group: {
+                _id: '$user',
+                name: { $last: '$name' },
+                email: { $last: '$email' },
+                bookingCount: { $sum: 1 },
+            },
+        },
+        { $match: { bookingCount: { $gt: 1 } } },
+        { $sort: { bookingCount: -1 } },
+        { $limit: 20 },
+    ])
+        .then(customers => res.status(200).json(customers))
+        .catch(() => res.status(500).json({ message: 'Error loading customers' }));
+});
+
+module.exports = router;
