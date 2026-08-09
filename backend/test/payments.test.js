@@ -29,6 +29,7 @@ beforeAll(async () => {
 afterEach(async () => {
     await clearDb();
     razorpayMock.orders.create.mockReset();
+    require('../mailer').sendBookingConfirmationEmail.mockClear();
 });
 
 afterAll(async () => {
@@ -173,6 +174,82 @@ describe('POST /payments/verify', () => {
             });
 
         expect(res.status).toBe(400);
+    });
+
+    test('does not double-confirm or double-email when the webhook backstop already confirmed the booking', async () => {
+        const mailer = require('../mailer');
+        const { user, token } = await makeUser();
+        const event = await EventModel.create({ name: 'E', description: 'D', imageUrl: 'x', category: 'c', advanceAmount: 500 });
+        const booking = await makePendingBooking({ event, user, orderId: 'order_race' });
+
+        // Simulate the webhook backstop winning the race first.
+        await BookingModel.findOneAndUpdate(
+            { _id: booking._id, status: 'pending_payment' },
+            { $set: { status: 'confirmed', razorpayPaymentId: 'pay_race' } }
+        );
+
+        const res = await request(app)
+            .post('/payments/verify')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                bookingId: booking._id,
+                razorpay_order_id: 'order_race',
+                razorpay_payment_id: 'pay_race',
+                razorpay_signature: signPayment('order_race', 'pay_race'),
+            });
+
+        // Still a success from the client's point of view — the booking is confirmed —
+        // but this request lost the compare-and-swap, so it must not re-send the email.
+        expect(res.status).toBe(200);
+        expect(res.body.status).toBe('confirmed');
+        expect(mailer.sendBookingConfirmationEmail).not.toHaveBeenCalled();
+    });
+
+    test('concurrent verify + webhook confirmation for the same booking sends exactly one email', async () => {
+        const crypto2 = require('crypto');
+        const mailer = require('../mailer');
+        const { user, token } = await makeUser();
+        const event = await EventModel.create({ name: 'E', description: 'D', imageUrl: 'x', category: 'c', advanceAmount: 500 });
+        const booking = await makePendingBooking({ event, user, orderId: 'order_concurrent' });
+
+        const webhookPayload = {
+            event: 'payment.captured',
+            payload: { payment: { entity: { id: 'pay_concurrent', order_id: 'order_concurrent' } } },
+        };
+        const rawBody = JSON.stringify(webhookPayload);
+        const webhookSignature = crypto2
+            .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
+            .update(rawBody)
+            .digest('hex');
+
+        const [verifyRes, webhookRes] = await Promise.all([
+            request(app)
+                .post('/payments/verify')
+                .set('Authorization', `Bearer ${token}`)
+                .send({
+                    bookingId: booking._id,
+                    razorpay_order_id: 'order_concurrent',
+                    razorpay_payment_id: 'pay_concurrent',
+                    razorpay_signature: signPayment('order_concurrent', 'pay_concurrent'),
+                }),
+            request(app)
+                .post('/webhooks/razorpay')
+                .set('Content-Type', 'application/json')
+                .set('x-razorpay-signature', webhookSignature)
+                .send(rawBody),
+        ]);
+
+        expect(verifyRes.status).toBe(200);
+        expect(webhookRes.status).toBe(200);
+
+        const saved = await waitFor(async () => {
+            const doc = await BookingModel.findById(booking._id);
+            return doc.status === 'confirmed' ? doc : null;
+        });
+        expect(saved.status).toBe('confirmed');
+
+        await waitFor(() => mailer.sendBookingConfirmationEmail.mock.calls.length > 0);
+        expect(mailer.sendBookingConfirmationEmail).toHaveBeenCalledTimes(1);
     });
 });
 

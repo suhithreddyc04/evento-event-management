@@ -33,30 +33,34 @@ router.post('/webhooks/razorpay', (req, res) => {
     const payment = req.body.payload?.payment?.entity;
     if (!payment) return;
 
-    BookingModel.findOne({ razorpayOrderId: payment.order_id, status: 'pending_payment' })
+    // Atomic compare-and-swap on both legs below: the client-driven /payments/verify
+    // (or /payments/final/verify) can be confirming the same payment concurrently.
+    // Gating each update on the still-pending status means whichever request (this
+    // webhook or the client call) gets there first is the only one that actually
+    // writes and sends an email — the other finds nothing left to update.
+    BookingModel.findOneAndUpdate(
+        { razorpayOrderId: payment.order_id, status: 'pending_payment' },
+        { $set: { status: 'confirmed', razorpayPaymentId: payment.id } },
+        { new: true }
+    )
         .then(booking => {
             if (booking) {
-                booking.status = 'confirmed';
-                booking.razorpayPaymentId = payment.id;
-                return booking.save().then(saved =>
-                    EventModel.findById(saved.event).then(event => {
-                        if (event) {
-                            sendBookingConfirmationEmail(saved.email, event, saved.date, saved.details, saved.specialRequests).catch(err =>
-                                console.error('Booking confirmation email failed:', err)
-                            );
-                        }
-                    })
-                );
+                return EventModel.findById(booking.event).then(event => {
+                    if (event) {
+                        sendBookingConfirmationEmail(booking.email, event, booking.date, booking.details, booking.specialRequests).catch(err =>
+                            console.error('Booking confirmation email failed:', err)
+                        );
+                    }
+                });
             }
 
-            // Not an advance payment — check whether it's a final-balance payment instead.
-            return BookingModel.findOne({ finalRazorpayOrderId: payment.order_id, finalPaymentStatus: 'pending' })
-                .then(finalBooking => {
-                    if (!finalBooking) return null;
-                    finalBooking.finalPaymentStatus = 'paid';
-                    finalBooking.finalRazorpayPaymentId = payment.id;
-                    return finalBooking.save();
-                });
+            // Not an advance payment (or the client's /payments/verify already won the
+            // race above) — check whether it's a final-balance payment instead.
+            return BookingModel.findOneAndUpdate(
+                { finalRazorpayOrderId: payment.order_id, finalPaymentStatus: 'pending' },
+                { $set: { finalPaymentStatus: 'paid', finalRazorpayPaymentId: payment.id } },
+                { new: true }
+            );
         })
         .catch(err => console.error('Webhook booking confirmation failed:', err));
 });

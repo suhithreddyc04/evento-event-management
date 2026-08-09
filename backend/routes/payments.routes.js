@@ -53,16 +53,17 @@ router.post('/payments/verify', requireAuth, (req, res) => {
         return res.status(400).json({ message: 'Missing payment verification fields' });
     }
 
-    let booking;
-    let event;
+    let confirmedHere = false; // did *this* request win the race to confirm, or did the webhook backstop already do it?
 
     BookingModel.findOne({ _id: bookingId, user: req.user.id })
         .then(found => {
             if (!found) return Promise.reject({ status: 404, message: 'Booking not found' });
-            if (found.status !== 'pending_payment' || found.razorpayOrderId !== razorpay_order_id) {
+            if (found.status !== 'pending_payment' && found.status !== 'confirmed') {
                 return Promise.reject({ status: 400, message: 'Booking is not awaiting this payment' });
             }
-            booking = found;
+            if (found.razorpayOrderId !== razorpay_order_id) {
+                return Promise.reject({ status: 400, message: 'Booking is not awaiting this payment' });
+            }
 
             const expectedSignature = crypto
                 .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
@@ -73,17 +74,25 @@ router.post('/payments/verify', requireAuth, (req, res) => {
                 return Promise.reject({ status: 400, message: 'Payment verification failed' });
             }
 
-            return EventModel.findById(booking.event);
+            // Atomic compare-and-swap: the /webhooks/razorpay backstop can be confirming
+            // this same booking concurrently. Gating the update on status still being
+            // 'pending_payment' means only one of the two requests actually flips it —
+            // the loser below just re-reads the (already confirmed) booking instead of
+            // saving over it and sending a second confirmation email.
+            return BookingModel.findOneAndUpdate(
+                { _id: bookingId, status: 'pending_payment', razorpayOrderId: razorpay_order_id },
+                { $set: { status: 'confirmed', razorpayPaymentId: razorpay_payment_id } },
+                { new: true }
+            );
         })
-        .then(foundEvent => {
-            event = foundEvent;
-            booking.status = 'confirmed';
-            booking.razorpayPaymentId = razorpay_payment_id;
-            return booking.save();
+        .then(updated => {
+            confirmedHere = !!updated;
+            const booking = updated || BookingModel.findById(bookingId);
+            return Promise.all([booking, updated ? EventModel.findById(updated.event) : null]);
         })
-        .then(saved => {
+        .then(([saved, event]) => {
             res.status(200).json(saved);
-            if (event) {
+            if (confirmedHere && event) {
                 sendBookingConfirmationEmail(saved.email, event, saved.date, saved.details, saved.specialRequests).catch(err =>
                     console.error('Booking confirmation email failed:', err)
                 );
@@ -141,7 +150,10 @@ router.post('/payments/final/verify', requireAuth, (req, res) => {
     BookingModel.findOne({ _id: bookingId, user: req.user.id })
         .then(booking => {
             if (!booking) return Promise.reject({ status: 404, message: 'Booking not found' });
-            if (booking.finalPaymentStatus !== 'pending' || booking.finalRazorpayOrderId !== razorpay_order_id) {
+            if (booking.finalPaymentStatus !== 'pending' && booking.finalPaymentStatus !== 'paid') {
+                return Promise.reject({ status: 400, message: 'Booking is not awaiting this payment' });
+            }
+            if (booking.finalRazorpayOrderId !== razorpay_order_id) {
                 return Promise.reject({ status: 400, message: 'Booking is not awaiting this payment' });
             }
 
@@ -154,9 +166,13 @@ router.post('/payments/final/verify', requireAuth, (req, res) => {
                 return Promise.reject({ status: 400, message: 'Payment verification failed' });
             }
 
-            booking.finalPaymentStatus = 'paid';
-            booking.finalRazorpayPaymentId = razorpay_payment_id;
-            return booking.save();
+            // Same compare-and-swap as /payments/verify — the webhook backstop can be
+            // racing this request for the same final-balance payment.
+            return BookingModel.findOneAndUpdate(
+                { _id: bookingId, finalPaymentStatus: 'pending', finalRazorpayOrderId: razorpay_order_id },
+                { $set: { finalPaymentStatus: 'paid', finalRazorpayPaymentId: razorpay_payment_id } },
+                { new: true }
+            ).then(updated => updated || BookingModel.findById(bookingId));
         })
         .then(saved => res.status(200).json(saved))
         .catch(err => {
