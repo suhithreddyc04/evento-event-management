@@ -37,9 +37,9 @@ const categoryPreviews = [
 
 const Home = () => {
     const navigate = useNavigate();
-    const { isAuthenticated, isAdmin } = useAuth();
+    const { isAuthenticated, isManager } = useAuth();
 
-    if (isAuthenticated && isAdmin) {
+    if (isAuthenticated && isManager) {
         return <Navigate to="/admin" replace />;
     }
 

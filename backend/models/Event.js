@@ -14,6 +14,7 @@ const EventSchema = new mongoose.Schema({
     price: { type: Number, default: null }, // null = contact for pricing
     advanceAmount: { type: Number, default: null }, // null = no advance payment required to book
     completed: { type: Boolean, default: false }, // reviews only open once true
+    manager: { type: mongoose.Schema.Types.ObjectId, ref: 'log_reg_form', default: null }, // the manager who runs this event day-to-day
 });
 
 const EventModel = mongoose.model('Event', EventSchema);

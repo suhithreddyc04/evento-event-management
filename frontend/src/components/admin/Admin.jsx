@@ -26,10 +26,11 @@ const emptyForm = {
 };
 
 const Admin = () => {
-    const { isAuthenticated, isAdmin } = useAuth();
+    const { isAuthenticated, isAdmin, isManager, userId } = useAuth();
     const toast = useToast();
 
     const [events, setEvents] = useState([]);
+    const [managers, setManagers] = useState([]);
     const [lowRatingCounts, setLowRatingCounts] = useState({});
     const [loading, setLoading] = useState(true);
     const [form, setForm] = useState(emptyForm);
@@ -41,7 +42,13 @@ const Admin = () => {
     const loadEvents = () => {
         setLoading(true);
         api.get('/events', { params: { limit: 1000 } })
-            .then(response => setEvents(response.data.events))
+            .then(response => {
+                // Managers only ever act on their own assigned events; admins see everything.
+                const own = isAdmin
+                    ? response.data.events
+                    : response.data.events.filter((event) => event.manager === userId);
+                setEvents(own);
+            })
             .catch(() => toast.error('Could not load events.'))
             .finally(() => setLoading(false));
 
@@ -56,13 +63,20 @@ const Admin = () => {
                 setLowRatingCounts(counts);
             })
             .catch(() => {});
+
+        if (isAdmin) {
+            api.get('/admin/users')
+                .then(response => setManagers(response.data))
+                .catch(() => {});
+        }
     };
 
     useEffect(() => {
-        if (isAuthenticated && isAdmin) loadEvents();
-    }, [isAuthenticated, isAdmin]);
+        if (isAuthenticated && isManager) loadEvents();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAuthenticated, isManager]);
 
-    if (!isAuthenticated || !isAdmin) {
+    if (!isAuthenticated || !isManager) {
         return <Navigate to="/home" replace />;
     }
 
@@ -153,11 +167,20 @@ const Admin = () => {
             .catch(() => toast.error('Could not update event status.'));
     };
 
+    const handleAssignManager = (eventId, managerId) => {
+        api.put(`/admin/events/${eventId}/manager`, { managerId: managerId || null })
+            .then(() => {
+                toast.success(managerId ? 'Manager assigned.' : 'Manager unassigned.');
+                loadEvents();
+            })
+            .catch(err => toast.error(err.response?.data?.message || 'Could not assign manager.'));
+    };
+
     return (
         <div>
             <Header />
             <section className="admin-section">
-                <h1>Admin</h1>
+                <h1>{isAdmin ? 'Admin' : 'Manage Events'}</h1>
 
                 <div className="admin-tabs">
                     <button
@@ -167,13 +190,15 @@ const Admin = () => {
                     >
                         Manage Events
                     </button>
-                    <button
-                        type="button"
-                        className={`admin-tab-button ${activeTab === 'eventForm' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('eventForm')}
-                    >
-                        {editingId ? 'Edit Event' : 'Add New Event'}
-                    </button>
+                    {isAdmin && (
+                        <button
+                            type="button"
+                            className={`admin-tab-button ${activeTab === 'eventForm' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('eventForm')}
+                        >
+                            {editingId ? 'Edit Event' : 'Add New Event'}
+                        </button>
+                    )}
                     <button
                         type="button"
                         className={`admin-tab-button ${activeTab === 'bookings' ? 'active' : ''}`}
@@ -181,17 +206,19 @@ const Admin = () => {
                     >
                         Bookings
                     </button>
-                    <button
-                        type="button"
-                        className={`admin-tab-button ${activeTab === 'analytics' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('analytics')}
-                    >
-                        Analytics
-                    </button>
+                    {isAdmin && (
+                        <button
+                            type="button"
+                            className={`admin-tab-button ${activeTab === 'analytics' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('analytics')}
+                        >
+                            Analytics
+                        </button>
+                    )}
                 </div>
 
                 {activeTab === 'analytics' ? (
-                    <AdminAnalytics />
+                    isAdmin ? <AdminAnalytics /> : null
                 ) : activeTab === 'bookings' ? (
                     <AdminBookings events={events} />
                 ) : activeTab === 'eventForm' ? (
@@ -301,6 +328,7 @@ const Admin = () => {
                                     <th>Price</th>
                                     <th>Advance</th>
                                     <th>Status</th>
+                                    {isAdmin && <th>Manager</th>}
                                     <th></th>
                                 </tr>
                             </thead>
@@ -331,6 +359,20 @@ const Admin = () => {
                                                 <span className="admin-status-none">No bookings yet</span>
                                             )}
                                         </td>
+                                        {isAdmin && (
+                                            <td>
+                                                <select
+                                                    className="form-select form-select-sm"
+                                                    value={event.manager || ''}
+                                                    onChange={(e) => handleAssignManager(event._id, e.target.value)}
+                                                >
+                                                    <option value="">Unassigned</option>
+                                                    {managers.map((user) => (
+                                                        <option key={user._id} value={user._id}>{user.name} ({user.email})</option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                        )}
                                         <td className="admin-row-actions">
                                             <button className="btn btn-sm btn-outline-primary" onClick={() => startEdit(event)}>Edit</button>
                                             {event.bookedCount > 0 && (
@@ -338,7 +380,9 @@ const Admin = () => {
                                                     {event.completed ? 'Reopen' : 'Complete Event'}
                                                 </button>
                                             )}
-                                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(event._id)}>Delete</button>
+                                            {isAdmin && (
+                                                <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(event._id)}>Delete</button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

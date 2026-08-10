@@ -3,7 +3,7 @@ const EventModel = require('../models/Event');
 const BookingModel = require('../models/Booking');
 const ReviewModel = require('../models/Review');
 const FormDataModel = require('../models/FormData');
-const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { requireAuth, requireAdmin, requireManager, requireEventAccess } = require('../middleware/auth');
 const upload = require('../config/upload');
 const { activateFinalPayments } = require('../services/bookingLifecycle');
 
@@ -11,7 +11,7 @@ const router = express.Router();
 
 // Admin: event management
 
-router.post('/admin/upload', requireAuth, requireAdmin, (req, res) => {
+router.post('/admin/upload', requireAuth, requireManager, (req, res) => {
     upload.single('image')(req, res, (err) => {
         if (err) return res.status(400).json({ message: err.message || 'Upload failed' });
         if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
@@ -39,7 +39,7 @@ router.post('/admin/events', requireAuth, requireAdmin, (req, res) => {
         .catch(() => res.status(500).json({ message: 'Error creating event' }));
 });
 
-router.put('/admin/events/:id', requireAuth, requireAdmin, (req, res) => {
+router.put('/admin/events/:id', requireAuth, requireManager, requireEventAccess((req) => req.params.id), (req, res) => {
     const { name, description, imageUrl, category, location, details, activities, decorations, games, capacity, price, advanceAmount } = req.body;
 
     EventModel.findByIdAndUpdate(
@@ -70,7 +70,7 @@ router.delete('/admin/events/:id', requireAuth, requireAdmin, (req, res) => {
         .catch(() => res.status(500).json({ message: 'Error deleting event' }));
 });
 
-router.put('/admin/events/:id/complete', requireAuth, requireAdmin, (req, res) => {
+router.put('/admin/events/:id/complete', requireAuth, requireManager, requireEventAccess((req) => req.params.id), (req, res) => {
     const completed = req.body.completed !== undefined ? !!req.body.completed : true;
 
     EventModel.findByIdAndUpdate(req.params.id, { completed }, { new: true })
@@ -86,23 +86,71 @@ router.put('/admin/events/:id/complete', requireAuth, requireAdmin, (req, res) =
         .catch(() => res.status(500).json({ message: 'Error updating event' }));
 });
 
-router.get('/admin/bookings', requireAuth, requireAdmin, (req, res) => {
-    const filter = {};
-    if (req.query.eventId) filter.event = req.query.eventId;
+// Admin: manager assignment
 
-    // Default view (no event picked) hides completed events to stay uncluttered,
-    // but picking a specific event — including a completed one — shows all its
-    // bookings, since admins need this to manage final payments after the event.
-    BookingModel.find(filter)
-        .sort({ createdAt: -1 })
-        .populate('event', 'name capacity completed')
-        .then(bookings => res.status(200).json(bookings.filter(booking =>
-            booking.event && (req.query.eventId || !booking.event.completed)
-        )))
+router.get('/admin/users', requireAuth, requireAdmin, (req, res) => {
+    const filter = req.query.role ? { role: req.query.role } : {};
+    FormDataModel.find(filter, 'name email role isAdmin')
+        .sort({ name: 1 })
+        .then(users => res.status(200).json(users))
+        .catch(() => res.status(500).json({ message: 'Error loading users' }));
+});
+
+router.put('/admin/events/:id/manager', requireAuth, requireAdmin, (req, res) => {
+    const { managerId } = req.body;
+
+    const assign = managerId
+        ? FormDataModel.findById(managerId).then(user => {
+            if (!user) return Promise.reject({ status: 404, message: 'User not found' });
+            // Assigning someone as a manager grants them the role if they don't have it yet.
+            return user.role === 'manager' ? user : FormDataModel.findByIdAndUpdate(managerId, { role: 'manager' });
+        })
+        : Promise.resolve(null);
+
+    assign
+        .then(() => EventModel.findByIdAndUpdate(req.params.id, { manager: managerId || null }, { new: true }))
+        .then(updated => {
+            if (!updated) return Promise.reject({ status: 404, message: 'Event not found' });
+            res.status(200).json(updated);
+        })
+        .catch(err => {
+            if (err && err.status) return res.status(err.status).json({ message: err.message });
+            res.status(500).json({ message: 'Error assigning manager' });
+        });
+});
+
+// Admin/manager: bookings
+
+router.get('/admin/bookings', requireAuth, requireManager, (req, res) => {
+    const scopeToOwnEvents = req.user.isAdmin
+        ? Promise.resolve(null)
+        : EventModel.find({ manager: req.user.id }, '_id').then(events => events.map(e => e._id.toString()));
+
+    scopeToOwnEvents.then(ownEventIds => {
+        if (ownEventIds && req.query.eventId && !ownEventIds.includes(req.query.eventId)) {
+            return res.status(403).json({ message: 'You do not manage this event' });
+        }
+
+        const filter = {};
+        if (req.query.eventId) filter.event = req.query.eventId;
+        else if (ownEventIds) filter.event = { $in: ownEventIds };
+
+        // Default view (no event picked) hides completed events to stay uncluttered,
+        // but picking a specific event — including a completed one — shows all its
+        // bookings, since admins/managers need this to manage final payments after the event.
+        return BookingModel.find(filter)
+            .sort({ createdAt: -1 })
+            .populate('event', 'name capacity completed')
+            .then(bookings => res.status(200).json(bookings.filter(booking =>
+                booking.event && (req.query.eventId || !booking.event.completed)
+            )));
+    })
         .catch(() => res.status(500).json({ message: 'Error loading bookings' }));
 });
 
-router.put('/admin/bookings/:id/final-amount', requireAuth, requireAdmin, (req, res) => {
+router.put('/admin/bookings/:id/final-amount', requireAuth, requireManager, requireEventAccess((req) =>
+    BookingModel.findById(req.params.id).then(booking => booking?.event)
+), (req, res) => {
     const { finalAmount } = req.body;
     const amount = finalAmount === '' || finalAmount == null ? null : Number(finalAmount);
 
@@ -226,15 +274,23 @@ router.get('/admin/analytics', requireAuth, requireAdmin, (req, res) => {
         .catch(() => res.status(500).json({ message: 'Error loading analytics' }));
 });
 
-router.get('/admin/reviews', requireAuth, requireAdmin, (req, res) => {
-    ReviewModel.find()
-        .sort({ createdAt: -1 })
-        .populate('event', 'name')
+router.get('/admin/reviews', requireAuth, requireManager, (req, res) => {
+    const scopeToOwnEvents = req.user.isAdmin
+        ? Promise.resolve(null)
+        : EventModel.find({ manager: req.user.id }, '_id').then(events => events.map(e => e._id));
+
+    scopeToOwnEvents.then(ownEventIds => (
+        ReviewModel.find(ownEventIds ? { event: { $in: ownEventIds } } : {})
+            .sort({ createdAt: -1 })
+            .populate('event', 'name')
+    ))
         .then(reviews => res.status(200).json(reviews))
         .catch(() => res.status(500).json({ message: 'Error loading reviews' }));
 });
 
-router.patch('/admin/reviews/:id/flag', requireAuth, requireAdmin, (req, res) => {
+router.patch('/admin/reviews/:id/flag', requireAuth, requireManager, requireEventAccess((req) =>
+    ReviewModel.findById(req.params.id).then(review => review?.event)
+), (req, res) => {
     ReviewModel.findById(req.params.id)
         .then(review => {
             if (!review) return Promise.reject({ status: 404, message: 'Review not found' });
@@ -245,7 +301,9 @@ router.patch('/admin/reviews/:id/flag', requireAuth, requireAdmin, (req, res) =>
         .catch(err => res.status(err?.status || 500).json({ message: err?.message || 'Error updating review' }));
 });
 
-router.post('/admin/reviews/:id/reply', requireAuth, requireAdmin, (req, res) => {
+router.post('/admin/reviews/:id/reply', requireAuth, requireManager, requireEventAccess((req) =>
+    ReviewModel.findById(req.params.id).then(review => review?.event)
+), (req, res) => {
     const text = (req.body.text || '').trim();
 
     ReviewModel.findById(req.params.id)

@@ -46,6 +46,8 @@ export const AuthProvider = ({ children }) => {
             token,
             isAuthenticated: !!token,
             isAdmin: !!claims?.isAdmin,
+            role: claims?.role || 'client',
+            isManager: !!claims?.isAdmin || claims?.role === 'manager',
             hasPassword: !!claims?.hasPassword,
             email: claims?.email || null,
             userId: claims?.id || null,

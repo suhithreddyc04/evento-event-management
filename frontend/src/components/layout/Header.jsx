@@ -8,11 +8,11 @@ import './Header.css';
 const Header = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { isAuthenticated, isAdmin, hasPassword, avatarUrl, logout } = useAuth();
+    const { isAuthenticated, isAdmin, isManager, hasPassword, avatarUrl, logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
     const [profileOpen, setProfileOpen] = useState(false);
     const profileRef = useRef(null);
-    const landingPath = isAdmin ? '/admin' : '/home';
+    const landingPath = isManager ? '/admin' : '/home';
     const isHome = location.pathname === landingPath;
 
     const handleBackClick = () => {
@@ -67,11 +67,11 @@ const Header = () => {
                     <i className={`bi ${theme === 'dark' ? 'bi-sun-fill' : 'bi-moon-stars-fill'}`}></i>
                 </button>
 
-                {!(isAuthenticated && isAdmin) && <Link to="/home" className="header-link">Home</Link>}
+                {!(isAuthenticated && isManager) && <Link to="/home" className="header-link">Home</Link>}
 
-                {isAuthenticated && isAdmin ? (
+                {isAuthenticated && isManager ? (
                     <>
-                        <Link to="/admin" className="header-link">Admin</Link>
+                        <Link to="/admin" className="header-link">{isAdmin ? 'Admin' : 'Manage Events'}</Link>
                         <button className="header-button" onClick={handleLogOutClick}>Log Out</button>
                     </>
                 ) : isAuthenticated ? (

@@ -37,7 +37,10 @@ const AdminAnalytics = () => {
                 setReviews(reviewsRes.data);
                 setCustomers(customersRes.data);
             })
-            .catch(() => toast.error('Could not load analytics.'))
+            .catch((err) => {
+                console.error('Analytics load failed:', err.response?.status, err.response?.data || err.message);
+                toast.error(err.response?.data?.message || `Could not load analytics (${err.response?.status || 'network error'}).`);
+            })
             .finally(() => setLoading(false));
     };
 
