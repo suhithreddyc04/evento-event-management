@@ -1,10 +1,14 @@
 const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { MongoMemoryReplSet } = require('mongodb-memory-server');
 
 let mongod;
 
 async function connect() {
-    mongod = await MongoMemoryServer.create();
+    // A single-node replica set, not a plain MongoMemoryServer standalone —
+    // POST /bookings uses a transaction (see bookings.routes.js), and
+    // transactions only work against a replica set, same as the Atlas
+    // deployment (mongodb+srv://) this app actually runs against.
+    mongod = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
     await mongoose.connect(mongod.getUri());
 }
 
@@ -16,7 +20,7 @@ async function clearDb() {
 async function disconnect() {
     await mongoose.connection.dropDatabase();
     await mongoose.connection.close();
-    if (mongod) await mongod.stop();
+    if (mongod) await mongod.stop({ doCleanup: true, force: true });
 }
 
 // Several routes fire off a side effect (waitlist promotion, webhook booking

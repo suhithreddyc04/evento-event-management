@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const EventModel = require('../models/Event');
 const BookingModel = require('../models/Booking');
 const { requireAuth } = require('../middleware/auth');
@@ -7,7 +8,7 @@ const { sendBookingConfirmationEmail } = require('../mailer');
 
 const router = express.Router();
 
-router.post('/bookings', requireAuth, (req, res) => {
+router.post('/bookings', requireAuth, async (req, res) => {
     const { eventId, name, phone, address, date, details, specialRequests } = req.body;
     const email = req.user.email; // always the logged-in user's email, never trust client input here
 
@@ -16,21 +17,29 @@ router.post('/bookings', requireAuth, (req, res) => {
     }
 
     let event;
+    let booking;
 
-    EventModel.findById(eventId)
-        .then(foundEvent => {
-            if (!foundEvent) return Promise.reject({ status: 404, message: 'Event not found' });
+    // The capacity check-then-insert below has to run as one atomic unit —
+    // otherwise two concurrent requests for the last spot can both read
+    // heldCount < capacity before either has saved, overbooking the event.
+    // The transaction makes the whole read+write atomic across the session.
+    const session = await mongoose.startSession();
+    try {
+        await session.withTransaction(async () => {
+            const foundEvent = await EventModel.findById(eventId).session(session);
+            if (!foundEvent) throw { status: 404, message: 'Event not found' };
             event = foundEvent;
 
-            return BookingModel.findOne({ event: eventId, user: req.user.id });
-        })
-        .then(existingBooking => {
-            if (existingBooking) return Promise.reject({ status: 409, message: 'You already booked this event' });
-            if (event.capacity == null) return null;
+            const existingBooking = await BookingModel.findOne({ event: eventId, user: req.user.id }).session(session);
+            if (existingBooking) throw { status: 409, message: 'You already booked this event' };
 
-            return BookingModel.countDocuments({ event: eventId, status: { $in: ['confirmed', 'pending_payment'] } });
-        })
-        .then(heldCount => {
+            let heldCount = 0;
+            if (event.capacity != null) {
+                heldCount = await BookingModel.countDocuments(
+                    { event: eventId, status: { $in: ['confirmed', 'pending_payment'] } }
+                ).session(session);
+            }
+
             // Once the event is at capacity, new bookings go to a waiting list
             // instead of being rejected outright — the admin can promote them
             // later if a spot frees up. Otherwise, events with an advance amount
@@ -42,7 +51,7 @@ router.post('/bookings', requireAuth, (req, res) => {
                     ? 'pending_payment'
                     : 'confirmed';
 
-            const booking = new BookingModel({
+            booking = new BookingModel({
                 event: eventId,
                 user: req.user.id,
                 name,
@@ -55,22 +64,29 @@ router.post('/bookings', requireAuth, (req, res) => {
                 status,
                 advanceAmount: status === 'pending_payment' ? event.advanceAmount : null,
             });
-            return booking.save();
-        })
-        .then(booking => {
-            res.status(201).json(booking);
-            // Only email on an actual confirmed booking — waitlisted and pending-payment
-            // bookings stay silent until confirmed (via payment verification or promotion).
-            if (booking.status === 'confirmed') {
-                sendBookingConfirmationEmail(email, event, date, details, specialRequests).catch(err =>
-                    console.error('Booking confirmation email failed:', err)
-                );
-            }
-        })
-        .catch(err => {
-            if (err && err.status) return res.status(err.status).json({ message: err.message });
-            res.status(500).json({ message: 'Error creating booking' });
+            await booking.save({ session });
         });
+
+        res.status(201).json(booking);
+        // Only email on an actual confirmed booking — waitlisted and pending-payment
+        // bookings stay silent until confirmed (via payment verification or promotion).
+        if (booking.status === 'confirmed') {
+            sendBookingConfirmationEmail(email, event, date, details, specialRequests).catch(err =>
+                console.error('Booking confirmation email failed:', err)
+            );
+        }
+    } catch (err) {
+        if (err && err.status) return res.status(err.status).json({ message: err.message });
+        // Duplicate-key from the unique (event,user) index — the DB-level backstop
+        // for the same race the transaction above already closes, kept in case a
+        // deployment ever runs against a non-replica-set Mongo without transactions.
+        if (err && err.code === 11000) {
+            return res.status(409).json({ message: 'You already booked this event' });
+        }
+        res.status(500).json({ message: 'Error creating booking' });
+    } finally {
+        session.endSession();
+    }
 });
 
 router.get('/bookings/mine', requireAuth, (req, res) => {

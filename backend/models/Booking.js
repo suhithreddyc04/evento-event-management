@@ -22,6 +22,13 @@ const BookingSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
 });
 
+// DB-level backstop against the "book the same event twice" race: two concurrent
+// POST /bookings from the same user for the same event can both pass the
+// pre-insert existingBooking check before either has saved. The unique index
+// makes the loser's save() fail with a duplicate-key error instead of creating
+// a second booking.
+BookingSchema.index({ event: 1, user: 1 }, { unique: true });
+
 const BookingModel = mongoose.model('Booking', BookingSchema);
 
 module.exports = BookingModel;
