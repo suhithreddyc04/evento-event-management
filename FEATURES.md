@@ -38,6 +38,7 @@ Running log of what the platform can do. Updated alongside every feature change.
 - **Reviews gated behind final payment** on events with a price — can't leave a review until the balance is settled
 - Razorpay **webhook** endpoint (`POST /webhooks/razorpay`) verifies `x-razorpay-signature` and confirms advance/final payments server-side as a fallback to the client-side confirm call (covers cases where the user closes the tab mid-payment)
 - Payment routes degrade gracefully (503 "Payments are not configured") if Razorpay keys aren't set — the rest of the app still works for free events
+- **Refunds on cancellation, gated behind admin approval**: cancelling a booking that already paid (advance and/or the final balance) never moves money on its own — it flags `refundStatus: 'requested'` with the amount owed. An admin/manager reviews it in the Bookings tab and either **Approves** (issues the actual Razorpay refund) or **Rejects** it; a failed Razorpay call can be retried from the same screen. Cancelling no longer deletes the booking — it's kept with `status: 'cancelled'` as an audit trail, and no longer blocks rebooking the same event (the uniqueness constraint is a partial index that excludes cancelled bookings)
 
 ## Reviews & Ratings
 - Star ratings + comments on events
@@ -48,18 +49,23 @@ Running log of what the platform can do. Updated alongside every feature change.
 - Admin can delete a review
 
 ## Admin Panel
-- **Manage Events** tab: create/edit/delete events, upload images, set capacity
+Each section is its own route now (`/admin/events`, `/admin/events/new`, `/admin/bookings`, `/admin/analytics`, `/admin/reviews`, `/admin/customers`) instead of client-side tabs on one page — direct links, browser back/forward, and page refresh all work per-section. A shared `AdminNav` renders the same nav row on every page; visibility of admin-only links (Add Event, Analytics, Customers) still follows the same permission split as before.
+
+- **Manage Events** (`/admin/events`): create/edit/delete events, upload images, set capacity
   - Status badge (Upcoming/Completed) + "Complete Event"/"Reopen" toggle — only shown for events that have bookings
   - Red `⚠ N` flaw indicator next to any event with 1–2★ reviews
   - **Auto-complete**: events automatically flip to "Completed" once every confirmed booking's date has passed (hourly scheduled job) — admin can still toggle manually
-- **Bookings** tab: view all bookings across events, filter by event; bookings for completed events are hidden automatically (nothing left to manage)
-- **Analytics** tab:
+  - Add/Edit now live on their own pages (`/admin/events/new`, `/admin/events/:id/edit`)
+- **Bookings** (`/admin/bookings`): view bookings, filter by event
+  - **Active / Cancelled toggle**: cancelled bookings are their own explicit view (`?status=cancelled`) rather than mixed into or hidden from the regular list — the default Active view still surface a cancelled booking whose refund is still `requested` or `failed`, since that needs action, but the Cancelled tab shows the full cancellation history regardless of resolution
+  - **Refund column**: Approve/Reject a requested refund, or Retry one that failed — see Payments below
+- **Reviews** (`/admin/reviews`): review moderation — search by keyword, sort by rating (low↔high) or newest, **"Find the flaws" filter** (1–2★ only, highlighted rows), reply, flag, delete. Managers see this scoped to their own events (matches the existing backend scoping — previously the UI only exposed this to admins even though managers already had API access to it)
+- **Analytics** (`/admin/analytics`, admin only):
   - Totals: events, bookings, users, reviews
   - Bookings-per-day chart (last 14 days)
   - **Average rating trend chart** (cumulative platform rating over the last 14 days) — spot a quality drop at a glance
   - Top rated events
-  - **Repeat customers** list (users with 2+ bookings)
-  - Review moderation table: search by keyword, sort by rating (low↔high) or newest, **"Find the flaws" filter** (1–2★ only, highlighted rows), reply, flag, delete
+- **Customers** (`/admin/customers`, admin only): **Repeat customers** list (users with 2+ bookings)
 
 ## Emails (via Nodemailer/Gmail)
 - Password reset
