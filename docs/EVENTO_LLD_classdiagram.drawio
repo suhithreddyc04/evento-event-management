@@ -1,0 +1,204 @@
+<mxfile host="app.diagrams.net" agent="Claude" version="24.7.0">
+  <diagram id="lld-class" name="LLD - UML Class Diagram (Data Model)">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="EVENTO — LLD: UML Class Diagram (Mongoose Data Model)" style="text;html=1;fontSize=20;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="330" y="10" width="740" height="36" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== USER CLASS ===================== -->
+        <mxCell id="cls_user" value="User (log_reg_form)" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=24;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="80" width="260" height="246" as="geometry" />
+        </mxCell>
+        <mxCell id="u1" value="name: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_user">
+          <mxGeometry y="24" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="u2" value="email: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_user">
+          <mxGeometry y="46" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="u3" value="password: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_user">
+          <mxGeometry y="68" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="u4" value="googleId: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_user">
+          <mxGeometry y="90" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="u5" value="avatarUrl: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_user">
+          <mxGeometry y="112" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="u6" value="isAdmin: Boolean = false" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_user">
+          <mxGeometry y="134" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="u7" value="role: 'client' | 'manager'" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_user">
+          <mxGeometry y="156" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="u8" value="favorites: ObjectId[] → Event" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_user">
+          <mxGeometry y="178" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="u9" value="resetPasswordToken: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_user">
+          <mxGeometry y="200" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="u10" value="resetPasswordExpires: Date" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_user">
+          <mxGeometry y="222" width="260" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== EVENT CLASS ===================== -->
+        <mxCell id="cls_event" value="Event" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=24;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="390" y="80" width="280" height="334" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="name: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_event">
+          <mxGeometry y="24" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="description: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_event">
+          <mxGeometry y="46" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="imageUrl: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_event">
+          <mxGeometry y="68" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="category: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_event">
+          <mxGeometry y="90" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="location: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_event">
+          <mxGeometry y="112" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="details: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_event">
+          <mxGeometry y="134" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="activities: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_event">
+          <mxGeometry y="156" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="decorations: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_event">
+          <mxGeometry y="178" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="games: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_event">
+          <mxGeometry y="200" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="capacity: Number | null" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_event">
+          <mxGeometry y="222" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" value="price: Number | null" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_event">
+          <mxGeometry y="244" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" value="advanceAmount: Number | null" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_event">
+          <mxGeometry y="266" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" value="completed: Boolean = false" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_event">
+          <mxGeometry y="288" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" value="manager: ObjectId → User" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_event">
+          <mxGeometry y="310" width="280" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== BOOKING CLASS ===================== -->
+        <mxCell id="cls_booking" value="Booking" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=24;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="750" y="80" width="310" height="444" as="geometry" />
+        </mxCell>
+        <mxCell id="b1" value="event: ObjectId → Event" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_booking">
+          <mxGeometry y="24" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="b2" value="user: ObjectId → User" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_booking">
+          <mxGeometry y="46" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="b3" value="name, email, phone, address: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_booking">
+          <mxGeometry y="68" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="b4" value="date: Date" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_booking">
+          <mxGeometry y="90" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="b5" value="details: Mixed (category answers)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_booking">
+          <mxGeometry y="112" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="b6" value="specialRequests: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_booking">
+          <mxGeometry y="134" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="b7" value="status: confirmed|waitlisted|pending_payment" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_booking">
+          <mxGeometry y="156" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="b8" value="advanceAmount: Number | null" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_booking">
+          <mxGeometry y="178" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="b9" value="razorpayOrderId / PaymentId: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_booking">
+          <mxGeometry y="200" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="b10" value="finalAmount: Number | null" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_booking">
+          <mxGeometry y="222" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="b11" value="finalPaymentStatus: not_required|pending|paid" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_booking">
+          <mxGeometry y="244" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="b12" value="finalRazorpayOrderId / PaymentId: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_booking">
+          <mxGeometry y="266" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="b13" value="reminderSent: Boolean = false" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_booking">
+          <mxGeometry y="288" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="b14" value="createdAt: Date = now" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_booking">
+          <mxGeometry y="310" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="b15" value="◆ UNIQUE INDEX (event, user)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontStyle=2;" vertex="1" parent="cls_booking">
+          <mxGeometry y="332" width="310" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== REVIEW CLASS ===================== -->
+        <mxCell id="cls_review" value="Review" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=24;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1110" y="80" width="280" height="224" as="geometry" />
+        </mxCell>
+        <mxCell id="r1" value="event: ObjectId → Event" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_review">
+          <mxGeometry y="24" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="r2" value="user: ObjectId → User" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_review">
+          <mxGeometry y="46" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="r3" value="name: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_review">
+          <mxGeometry y="68" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="r4" value="rating: Number (1-5)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_review">
+          <mxGeometry y="90" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="r5" value="comment: String" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_review">
+          <mxGeometry y="112" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="r6" value="createdAt: Date = now" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_review">
+          <mxGeometry y="134" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="r7" value="flagged: Boolean = false" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_review">
+          <mxGeometry y="156" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="r8" value="adminReply: {text, repliedAt}" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="cls_review">
+          <mxGeometry y="178" width="280" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="r9" value="◆ UNIQUE INDEX (event, user)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontStyle=2;" vertex="1" parent="cls_review">
+          <mxGeometry y="200" width="280" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== RELATIONSHIPS ===================== -->
+        <mxCell id="rel1" value="1" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;endArrow=ERmany;startArrow=ERone;" edge="1" parent="1" source="cls_user" target="cls_booking">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel2" value="1" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.15;entryDx=0;entryDy=0;endArrow=ERmany;startArrow=ERone;" edge="1" parent="1" source="cls_event" target="cls_booking">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel3" value="N" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.85;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;endArrow=ERmany;startArrow=ERone;" edge="1" parent="1" source="cls_event" target="cls_review">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel4" value="N" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.85;entryDx=0;entryDy=0;endArrow=ERmany;startArrow=ERone;" edge="1" parent="1" source="cls_user" target="cls_review">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="190" y="470" />
+              <mxPoint x="1250" y="470" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel5" value="0..1 manages" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.1;exitDx=0;exitDy=0;entryX=0;entryY=0.05;entryDx=0;entryDy=0;endArrow=ERzeroToOne;startArrow=ERone;" edge="1" parent="1" source="cls_user" target="cls_event">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note" value="Read arrows as: one User can have many Bookings/Reviews; one Event can have many Bookings/Reviews; a User (role=manager) may manage 0 or 1 Event(s)." style="text;html=1;align=center;fontSize=11;fontStyle=2;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="200" y="540" width="1050" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

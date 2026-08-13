@@ -1,0 +1,147 @@
+<mxfile host="app.diagrams.net" agent="Claude" version="24.7.0">
+  <diagram id="hld-page" name="HLD - High Level Design">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="EVENTO — High Level Design (HLD)" style="text;html=1;fontSize=22;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="520" y="20" width="560" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Client Layer -->
+        <mxCell id="lyr_client" value="Presentation Layer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="80" y="90" width="1440" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="browser" value="User Browser / Mobile Web" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="120" y="140" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="spa" value="React SPA (Vite)&#10;Hosted on Vercel&#10;— routing, AuthContext, ThemeContext, ToastContext" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="440" y="130" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cdn" value="Static Asset Delivery&#10;(Vercel Edge / SPA rewrite&#10;→ index.html)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="880" y="140" width="240" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="browser" target="spa">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="serves" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="cdn" target="spa">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Application Layer -->
+        <mxCell id="lyr_app" value="Application Layer (API)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;verticalAlign=top;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="80" y="270" width="1440" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="api" value="Express.js REST API (Node.js)&#10;Hosted on Render&#10;app.js: CORS, JSON parser, rate limiter" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="320" width="280" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="mw" value="Middleware:&#10;JWT Auth (requireAuth/requireAdmin/&#10;requireManager/requireEventAccess),&#10;Rate Limiting (general + auth)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="480" y="410" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="routes" value="Route Modules:&#10;auth · events · bookings · payments&#10;favorites · reviews · profile · admin · webhooks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="120" y="320" width="320" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="services" value="Services:&#10;bookingLifecycle (reminders, waitlist)&#10;favorites, token (JWT sign/verify)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="820" y="320" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="mailer" value="Mailer&#10;(Nodemailer wrapper)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="820" y="410" width="280" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="spa" target="api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3l" value="HTTPS / JSON REST&#10;(Bearer JWT)" style="text;html=1;align=center;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="600" y="240" width="140" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="api" target="routes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="api" target="services">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="api" target="mw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Data Layer -->
+        <mxCell id="lyr_data" value="Data Layer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;verticalAlign=top;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="80" y="510" width="440" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="mongo" value="MongoDB Atlas&#10;(Mongoose ODM)&#10;Users · Events · Bookings · Reviews" style="cylinder3=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="550" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="routes" target="mongo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- External Services Layer -->
+        <mxCell id="lyr_ext" value="External Services" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=top;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="560" y="510" width="960" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="cloudinary" value="Cloudinary&#10;(image storage/CDN)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="600" y="550" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="razorpay" value="Razorpay&#10;(payment gateway + webhook)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="820" y="550" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="google" value="Google OAuth 2.0&#10;(identity verification)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="550" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="smtp" value="SMTP Provider&#10;(password reset / reminder emails)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="550" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e8" value="upload/serve images" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;" edge="1" parent="1" source="api" target="cloudinary">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="create order / verify / webhook callback" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;" edge="1" parent="1" source="api" target="razorpay">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="verify ID token" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;" edge="1" parent="1" source="api" target="google">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" value="send email" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;" edge="1" parent="1" source="mailer" target="smtp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Deployment note -->
+        <mxCell id="note" value="Deployment: Frontend on Vercel (SPA rewrite to index.html) · Backend on Render (Node/Express) · DB on MongoDB Atlas&#10;Cross-cutting: CORS, JWT auth, rate limiting (general + auth-specific), booking capacity race protection via unique index + transaction" style="text;html=1;align=center;fontSize=11;fontStyle=2;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="280" y="680" width="1040" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend_box" value="Legend" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="90" width="360" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="lg1" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="120" width="24" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg1t" value="Client / Presentation" style="text;html=1;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1215" y="116" width="280" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="lg2" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="146" width="24" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg2t" value="Application / API server" style="text;html=1;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1215" y="142" width="280" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="lg3" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="172" width="24" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg3t" value="Data store (MongoDB)" style="text;html=1;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1215" y="168" width="280" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="lg4" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="198" width="24" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg4t" value="3rd-party / external service" style="text;html=1;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1215" y="194" width="280" height="24" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

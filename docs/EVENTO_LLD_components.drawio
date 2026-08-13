@@ -1,0 +1,154 @@
+<mxfile host="app.diagrams.net" agent="Claude" version="24.7.0">
+  <diagram id="lld-components" name="LLD - Layered Component Diagram">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="1450" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="EVENTO — LLD: Layered Component / Module Diagram (Backend)" style="text;html=1;fontSize=20;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="280" y="10" width="740" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="How a request flows top-to-bottom through the codebase, layer by layer" style="text;html=1;fontSize=12;fontStyle=2;align=center;" vertex="1" parent="1">
+          <mxGeometry x="280" y="42" width="740" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- Layer 1: Client -->
+        <mxCell id="l1" value="1 · CLIENT" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="90" width="1180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="client_box" value="React SPA — components/, context/ (Auth, Theme, Toast), lib/api.js (axios + JWT interceptor)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="330" y="115" width="640" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- Layer 2: Middleware (cross-cutting) -->
+        <mxCell id="l2" value="2 · MIDDLEWARE  (runs on every request, before route handlers)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="190" width="1180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="mw1" value="cors() · express.json()&#10;(captures rawBody for webhook sig check)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="90" y="222" width="280" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="mw2" value="rateLimit.js&#10;generalLimiter · authLimiter" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="400" y="222" width="280" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="mw3" value="auth.js&#10;requireAuth · optionalAuth · requireAdmin · requireManager · requireEventAccess" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="710" y="222" width="480" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- Layer 3: Routes -->
+        <mxCell id="l3" value="3 · ROUTES / CONTROLLERS  (routes/*.routes.js)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="300" width="1180" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="r_auth" value="auth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="90" y="335" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="r_events" value="events" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="225" y="335" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="r_bookings" value="bookings" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="360" y="335" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="r_payments" value="payments" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="495" y="335" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="r_webhooks" value="webhooks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="630" y="335" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="r_favorites" value="favorites" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="765" y="335" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="r_reviews" value="reviews" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="900" y="335" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="r_profile" value="profile" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1035" y="335" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="r_admin" value="admin&#10;(events CRUD, manager assign, analytics, moderation, customers)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="90" y="395" width="1065" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- Layer 4: Services -->
+        <mxCell id="l4" value="4 · SERVICES  (services/*.js — reusable business logic used by routes)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="480" width="1180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="s1" value="bookingLifecycle.js&#10;reminders · waitlist promotion" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="90" y="512" width="270" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" value="favorites.js&#10;add / remove / list" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="395" y="512" width="230" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="token.js&#10;JWT sign / verify" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="655" y="512" width="230" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" value="mailer.js&#10;Nodemailer wrapper" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="915" y="512" width="255" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- Layer 5: Models -->
+        <mxCell id="l5" value="5 · MODELS  (models/*.js — Mongoose schemas)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="590" width="1180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="mo1" value="log_reg_form (User)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="90" y="625" width="270" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="mo2" value="Event" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="395" y="625" width="230" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="mo3" value="Booking" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="655" y="625" width="230" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="mo4" value="Review" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="915" y="625" width="255" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Layer 6: DB + External -->
+        <mxCell id="l6" value="6 · DATA STORE  &amp;  EXTERNAL SERVICES" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="700" width="1180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="db1" value="MongoDB Atlas" style="cylinder3=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="90" y="732" width="170" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="db2" value="Cloudinary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="290" y="732" width="170" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="db3" value="Razorpay" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="490" y="732" width="170" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="db4" value="Google OAuth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="690" y="732" width="170" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="db5" value="SMTP Provider" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="890" y="732" width="170" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- Vertical flow arrows between layers -->
+        <mxCell id="a1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;" edge="1" parent="1" source="l1" target="l2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;" edge="1" parent="1" source="l2" target="l3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;" edge="1" parent="1" source="l3" target="l4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;" edge="1" parent="1" source="l4" target="l5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;" edge="1" parent="1" source="l5" target="l6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a6" value="routes call external SDKs directly&#10;(Cloudinary upload, Razorpay orders, Google verify)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;fontSize=10;" edge="1" parent="1" source="l3" target="l6">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1200" y="380" />
+              <mxPoint x="1200" y="745" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="note" value="Read this top-to-bottom: a request enters at the Client, passes through cross-cutting Middleware, is handled by a Route/Controller,&#10;which delegates reusable logic to a Service, which reads/writes a Model, which is persisted to MongoDB (or calls an external API)." style="text;html=1;align=center;fontSize=11;fontStyle=2;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="130" y="810" width="1080" height="50" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

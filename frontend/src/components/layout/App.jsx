@@ -14,7 +14,12 @@ import MyBookings from '../profile/MyBookings.jsx';
 import Favorites from '../profile/Favorites.jsx';
 import ChangePassword from '../auth/ChangePassword.jsx';
 import Profile from '../profile/Profile.jsx';
-import Admin from '../admin/Admin.jsx';
+import AdminEvents from '../admin/AdminEvents.jsx';
+import AdminEventForm from '../admin/AdminEventForm.jsx';
+import AdminBookings from '../admin/AdminBookings.jsx';
+import AdminAnalytics from '../admin/AdminAnalytics.jsx';
+import AdminReviews from '../admin/AdminReviews.jsx';
+import AdminCustomers from '../admin/AdminCustomers.jsx';
 import NotFound from '../shared/NotFound.jsx';
 import PageTransition from '../shared/PageTransition.jsx';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
@@ -34,7 +39,14 @@ const ROUTES = [
   { path: '/favorites', element: <Favorites /> },
   { path: '/change-password', element: <ChangePassword /> },
   { path: '/profile', element: <Profile /> },
-  { path: '/admin', element: <Admin /> },
+  { path: '/admin', element: <Navigate to="/admin/events" replace /> },
+  { path: '/admin/events', element: <AdminEvents /> },
+  { path: '/admin/events/new', element: <AdminEventForm /> },
+  { path: '/admin/events/:id/edit', element: <AdminEventForm /> },
+  { path: '/admin/bookings', element: <AdminBookings /> },
+  { path: '/admin/analytics', element: <AdminAnalytics /> },
+  { path: '/admin/reviews', element: <AdminReviews /> },
+  { path: '/admin/customers', element: <AdminCustomers /> },
 ];
 
 function AnimatedRoutes() {

@@ -1,0 +1,158 @@
+<mxfile host="app.diagrams.net" agent="Claude" version="24.7.0">
+  <diagram id="lld-sequence" name="LLD - Sequence Diagram (Booking + Payment)">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="EVENTO — LLD: Sequence Diagram — Book an Event with Advance Payment" style="text;html=1;fontSize=20;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="230" y="8" width="840" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Participant headers -->
+        <mxCell id="p_client" value="Client&#10;(Browser)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="p_fe" value="Frontend&#10;(React SPA)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="50" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="p_api" value="Backend API&#10;(bookings/payments routes)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="470" y="50" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="p_rp" value="Razorpay" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="720" y="50" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="p_db" value="MongoDB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="940" y="50" width="140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="p_mail" value="Mailer / SMTP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="50" width="140" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Lifelines -->
+        <mxCell id="ll_client" style="endArrow=none;dashed=1;html=1;strokeColor=#6c8ebf;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="110" y="90" as="sourcePoint" />
+            <mxPoint x="110" y="920" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ll_fe" style="endArrow=none;dashed=1;html=1;strokeColor=#82b366;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="310" y="90" as="sourcePoint" />
+            <mxPoint x="310" y="920" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ll_api" style="endArrow=none;dashed=1;html=1;strokeColor=#d79b00;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="550" y="90" as="sourcePoint" />
+            <mxPoint x="550" y="920" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ll_rp" style="endArrow=none;dashed=1;html=1;strokeColor=#b85450;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="790" y="90" as="sourcePoint" />
+            <mxPoint x="790" y="920" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ll_db" style="endArrow=none;dashed=1;html=1;strokeColor=#9673a6;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1010" y="90" as="sourcePoint" />
+            <mxPoint x="1010" y="920" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ll_mail" style="endArrow=none;dashed=1;html=1;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1210" y="90" as="sourcePoint" />
+            <mxPoint x="1210" y="920" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ===== Messages ===== -->
+        <!-- 1 -->
+        <mxCell id="m1" value="1. fills form &amp; submits" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="110" y="120" as="sourcePoint" /><mxPoint x="310" y="120" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 2 -->
+        <mxCell id="m2" value="2. POST /bookings { eventId, date, details }" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="310" y="155" as="sourcePoint" /><mxPoint x="550" y="155" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 3 -->
+        <mxCell id="m3" value="3. start session; check capacity + existing booking" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="550" y="190" as="sourcePoint" /><mxPoint x="1010" y="190" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 4 -->
+        <mxCell id="m4" value="4. Booking.save() — unique index (event,user)" style="html=1;endArrow=block;dashed=1;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1010" y="225" as="sourcePoint" /><mxPoint x="550" y="225" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 5 -->
+        <mxCell id="m5" value="5. commit txn → 201 { bookingId, status: pending_payment }" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="550" y="260" as="sourcePoint" /><mxPoint x="310" y="260" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 6 -->
+        <mxCell id="m6" value="6. POST /payments/create-order { bookingId }" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="310" y="295" as="sourcePoint" /><mxPoint x="550" y="295" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 7 -->
+        <mxCell id="m7" value="7. orders.create(amount = advanceAmount)" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="550" y="330" as="sourcePoint" /><mxPoint x="790" y="330" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 8 -->
+        <mxCell id="m8" value="8. order object { id, amount, currency }" style="html=1;endArrow=block;dashed=1;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="790" y="365" as="sourcePoint" /><mxPoint x="550" y="365" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 9 -->
+        <mxCell id="m9" value="9. { orderId, key, amount } → open Checkout" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="550" y="400" as="sourcePoint" /><mxPoint x="310" y="400" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 10 -->
+        <mxCell id="m10" value="10. Razorpay Checkout widget opens" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="310" y="435" as="sourcePoint" /><mxPoint x="790" y="435" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 11 -->
+        <mxCell id="m11" value="11. enters card/UPI details, pays" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="110" y="470" as="sourcePoint" /><mxPoint x="790" y="470" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 12 -->
+        <mxCell id="m12" value="12. handler(response) { payment_id, order_id, signature }" style="html=1;endArrow=block;dashed=1;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="790" y="505" as="sourcePoint" /><mxPoint x="310" y="505" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 13 -->
+        <mxCell id="m13" value="13. POST /payments/verify { payment_id, order_id, signature }" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="310" y="540" as="sourcePoint" /><mxPoint x="550" y="540" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 14 (parallel async webhook) -->
+        <mxCell id="m14" value="14. (async, in parallel) POST /webhooks/razorpay — signature-verified, idempotent" style="html=1;endArrow=block;fontSize=10;strokeColor=#b85450;fontColor=#b85450;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="790" y="580" as="sourcePoint" /><mxPoint x="550" y="580" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 15 -->
+        <mxCell id="m15" value="15. HMAC-SHA256 signature check passes" style="html=1;endArrow=none;fontSize=10;fontStyle=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="550" y="615" as="sourcePoint" /><mxPoint x="620" y="615" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 16 -->
+        <mxCell id="m16" value="16. Booking.status → 'confirmed' (idempotent update)" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="550" y="650" as="sourcePoint" /><mxPoint x="1010" y="650" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 17 -->
+        <mxCell id="m17" value="17. mailer.sendBookingConfirmation()" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="550" y="685" as="sourcePoint" /><mxPoint x="1210" y="685" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 18 -->
+        <mxCell id="m18" value="18. confirmation email delivered" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1210" y="720" as="sourcePoint" /><mxPoint x="110" y="720" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 19 -->
+        <mxCell id="m19" value="19. 200 { verified: true }" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="550" y="755" as="sourcePoint" /><mxPoint x="310" y="755" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <!-- 20 -->
+        <mxCell id="m20" value="20. shows booking confirmation screen" style="html=1;endArrow=block;fontSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="310" y="790" as="sourcePoint" /><mxPoint x="110" y="790" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="legend" value="Solid arrow = request/call  ·  Dashed arrow = response/return  ·  Red = independent async webhook path (Razorpay → server), which is why verification is idempotent" style="text;html=1;align=center;fontSize=11;fontStyle=2;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="150" y="840" width="1000" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

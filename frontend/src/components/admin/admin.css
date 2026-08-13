@@ -57,6 +57,29 @@
     color: #1f7a4d;
 }
 
+.admin-refund-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.admin-bookings-toolbar {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.admin-bookings-status-tabs {
+    margin-bottom: 0;
+}
+
+.admin-bookings-filter {
+    min-width: 220px;
+}
+
 .admin-events-table {
     width: 100%;
     border-collapse: collapse;
@@ -257,6 +280,11 @@
 .admin-status-badge.is-waitlisted {
     background: rgba(217, 140, 15, 0.16);
     color: var(--color-accent-dark);
+}
+
+.admin-status-badge.is-cancelled {
+    background: rgba(120, 120, 120, 0.16);
+    color: var(--color-text-muted);
 }
 
 .admin-status-none {
