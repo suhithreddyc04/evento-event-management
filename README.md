@@ -71,7 +71,7 @@ Copy `backend/.env.example` to `backend/.env` and fill in your own values:
 | `PORT` | Backend port (defaults to `3001`) |
 | `MONGO_URI` | MongoDB connection string |
 | `JWT_SECRET` | Secret used to sign auth tokens |
-| `CLIENT_URL` | Frontend origin, used for CORS and links in emails |
+| `CLIENT_URL` | Frontend origin(s) — comma-separated if you have more than one (e.g. prod + a Vercel preview). Enforced as the CORS allowlist and used for links in emails |
 | `EMAIL_USER` / `EMAIL_PASS` | Gmail address + [app password](https://myaccount.google.com/apppasswords) used to send transactional emails |
 | `ADMIN_EMAILS` | Comma-separated allowlist — accounts logging in with these emails become admins |
 | `GOOGLE_CLIENT_ID` | OAuth client ID for Google Sign-In |

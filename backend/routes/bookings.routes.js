@@ -4,6 +4,8 @@ const EventModel = require('../models/Event');
 const BookingModel = require('../models/Booking');
 const { requireAuth } = require('../middleware/auth');
 const { promoteNextWaitlisted } = require('../services/bookingLifecycle');
+const { recalculateEventStats } = require('../services/eventStats');
+const { refundAmountOwed } = require('../services/refunds');
 const { sendBookingConfirmationEmail } = require('../mailer');
 
 const router = express.Router();
@@ -30,7 +32,13 @@ router.post('/bookings', requireAuth, async (req, res) => {
             if (!foundEvent) throw { status: 404, message: 'Event not found' };
             event = foundEvent;
 
-            const existingBooking = await BookingModel.findOne({ event: eventId, user: req.user.id }).session(session);
+            // A previously cancelled booking for this event doesn't block a new one
+            // — see the partial unique index on the Booking model.
+            const existingBooking = await BookingModel.findOne({
+                event: eventId,
+                user: req.user.id,
+                status: { $ne: 'cancelled' },
+            }).session(session);
             if (existingBooking) throw { status: 409, message: 'You already booked this event' };
 
             let heldCount = 0;
@@ -75,6 +83,7 @@ router.post('/bookings', requireAuth, async (req, res) => {
                 console.error('Booking confirmation email failed:', err)
             );
         }
+        recalculateEventStats(eventId).catch(err => console.error('Event stats recalc failed:', err));
     } catch (err) {
         if (err && err.status) return res.status(err.status).json({ message: err.message });
         // Duplicate-key from the unique (event,user) index — the DB-level backstop
@@ -101,13 +110,31 @@ router.delete('/bookings/:id', requireAuth, (req, res) => {
     BookingModel.findOne({ _id: req.params.id, user: req.user.id })
         .then(booking => {
             if (!booking) return res.status(404).json({ message: 'Booking not found' });
-            return booking.deleteOne().then(() => {
-                res.status(200).json({ message: 'Booking cancelled' });
-                if (booking.status === 'confirmed' || booking.status === 'pending_payment') {
-                    promoteNextWaitlisted(booking.event).catch(err =>
+            if (booking.status === 'cancelled') {
+                return res.status(400).json({ message: 'Booking is already cancelled' });
+            }
+
+            // Cancelling never deletes the record — see cancelledAt/refundStatus on
+            // the Booking model. It also never moves money on its own: if anything
+            // was actually paid, this only flags a refund as 'requested' — the
+            // Razorpay call itself waits for an admin/manager to approve it via
+            // PUT /admin/bookings/:id/refund.
+            const wasHoldingASpot = booking.status === 'confirmed' || booking.status === 'pending_payment';
+            const amountOwed = refundAmountOwed(booking);
+
+            booking.status = 'cancelled';
+            booking.cancelledAt = new Date();
+            booking.refundStatus = amountOwed > 0 ? 'requested' : 'not_applicable';
+            booking.refundRequestedAmount = amountOwed > 0 ? amountOwed : null;
+
+            return booking.save().then(saved => {
+                res.status(200).json(saved);
+                if (wasHoldingASpot) {
+                    promoteNextWaitlisted(saved.event).catch(err =>
                         console.error('Waitlist promotion failed:', err)
                     );
                 }
+                recalculateEventStats(saved.event).catch(err => console.error('Event stats recalc failed:', err));
             });
         })
         .catch(() => res.status(400).json({ message: 'Could not cancel booking' }));

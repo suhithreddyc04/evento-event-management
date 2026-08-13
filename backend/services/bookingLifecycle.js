@@ -1,5 +1,6 @@
 const EventModel = require('../models/Event');
 const BookingModel = require('../models/Booking');
+const { recalculateEventStats } = require('./eventStats');
 const {
     sendWaitlistPromotedEmail,
     sendWaitlistPaymentRequiredEmail,
@@ -52,6 +53,7 @@ function promoteNextWaitlisted(eventId) {
                             sendWaitlistPaymentRequiredEmail(saved.email, event, saved.date).catch(err =>
                                 console.error('Waitlist payment-required email failed:', err)
                             );
+                            recalculateEventStats(eventId).catch(err => console.error('Event stats recalc failed:', err));
                         });
                     }
                     nextBooking.status = 'confirmed';
@@ -59,6 +61,7 @@ function promoteNextWaitlisted(eventId) {
                         sendWaitlistPromotedEmail(saved.email, event, saved.date).catch(err =>
                             console.error('Waitlist promotion email failed:', err)
                         );
+                        recalculateEventStats(eventId).catch(err => console.error('Event stats recalc failed:', err));
                     });
                 });
         });

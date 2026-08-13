@@ -4,6 +4,7 @@ const BookingModel = require('../models/Booking');
 const ReviewModel = require('../models/Review');
 const FormDataModel = require('../models/FormData');
 const { requireAuth } = require('../middleware/auth');
+const { recalculateEventStats } = require('../services/eventStats');
 
 const router = express.Router();
 
@@ -29,7 +30,7 @@ router.post('/events/:id/reviews', requireAuth, (req, res) => {
             if (!event.completed) {
                 return Promise.reject({ status: 403, message: 'Reviews open once this event has taken place' });
             }
-            return BookingModel.findOne({ event: eventId, user: req.user.id });
+            return BookingModel.findOne({ event: eventId, user: req.user.id, status: { $ne: 'cancelled' } });
         })
         .then(booking => {
             if (!booking) {
@@ -47,7 +48,10 @@ router.post('/events/:id/reviews', requireAuth, (req, res) => {
                 { new: true, upsert: true, setDefaultsOnInsert: true }
             );
         })
-        .then(review => res.status(200).json(review))
+        .then(review => {
+            res.status(200).json(review);
+            recalculateEventStats(eventId).catch(err => console.error('Event stats recalc failed:', err));
+        })
         .catch(err => {
             if (err && err.status) return res.status(err.status).json({ message: err.message });
             res.status(500).json({ message: 'Error saving review' });
@@ -61,7 +65,10 @@ router.delete('/reviews/:id', requireAuth, (req, res) => {
             if (review.user.toString() !== req.user.id && !req.user.isAdmin) {
                 return res.status(403).json({ message: 'You can only delete your own review' });
             }
-            return review.deleteOne().then(() => res.status(200).json({ message: 'Review deleted' }));
+            return review.deleteOne().then(() => {
+                res.status(200).json({ message: 'Review deleted' });
+                recalculateEventStats(review.event).catch(err => console.error('Event stats recalc failed:', err));
+            });
         })
         .catch(() => res.status(400).json({ message: 'Could not delete review' }));
 });

@@ -30,80 +30,29 @@ router.get('/events', optionalAuth, (req, res) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 12, 1), 50);
     const skip = (page - 1) * limit;
     const minRating = req.query.minRating ? Number(req.query.minRating) : null;
-    const sortStage = EVENT_SORTS[req.query.sort] || { _id: 1 };
+    const sort = EVENT_SORTS[req.query.sort] || { _id: 1 };
 
-    const pipeline = [
-        { $match: match },
-        {
-            $lookup: {
-                from: 'reviews',
-                localField: '_id',
-                foreignField: 'event',
-                as: 'reviewDocs',
-            },
-        },
-        {
-            $lookup: {
-                from: 'bookings',
-                localField: '_id',
-                foreignField: 'event',
-                as: 'bookingDocs',
-            },
-        },
-        {
-            $addFields: {
-                avgRating: {
-                    $cond: [
-                        { $gt: [{ $size: '$reviewDocs' }, 0] },
-                        { $round: [{ $avg: '$reviewDocs.rating' }, 1] },
-                        null,
-                    ],
-                },
-                reviewCount: { $size: '$reviewDocs' },
-                bookedCount: {
-                    $size: {
-                        $filter: {
-                            input: '$bookingDocs',
-                            cond: { $in: ['$$this.status', ['confirmed', 'pending_payment']] },
-                        },
-                    },
-                },
-            },
-        },
-    ];
+    // avgRating/reviewCount/bookedCount are cached on the Event document
+    // itself (kept current by services/eventStats.js on every review/booking
+    // write), so listing events is a plain indexed find — no per-request
+    // join across the reviews/bookings collections.
+    if (minRating) match.avgRating = { $gte: minRating };
 
-    if (minRating) {
-        pipeline.push({ $match: { avgRating: { $gte: minRating } } });
-    }
-
-    pipeline.push({
-        $facet: {
-            data: [
-                { $sort: sortStage },
-                { $skip: skip },
-                { $limit: limit },
-                { $project: { reviewDocs: 0, bookingDocs: 0 } },
-            ],
-            totalCount: [{ $count: 'count' }],
-        },
-    });
-
-    EventModel.aggregate(pipeline)
-        .then(([result]) => {
-            const events = result.data;
-            const total = result.totalCount[0]?.count || 0;
-
-            return getFavoriteIdSet(req.user?.id).then(favoriteIds => {
-                const withFavorites = events.map((event) => ({
-                    ...event,
-                    isFavorited: favoriteIds.has(event._id.toString()),
-                }));
-                res.status(200).json({
-                    events: withFavorites,
-                    total,
-                    page,
-                    hasMore: skip + withFavorites.length < total,
-                });
+    Promise.all([
+        EventModel.find(match).sort(sort).skip(skip).limit(limit).lean(),
+        EventModel.countDocuments(match),
+        getFavoriteIdSet(req.user?.id),
+    ])
+        .then(([events, total, favoriteIds]) => {
+            const withFavorites = events.map((event) => ({
+                ...event,
+                isFavorited: favoriteIds.has(event._id.toString()),
+            }));
+            res.status(200).json({
+                events: withFavorites,
+                total,
+                page,
+                hasMore: skip + withFavorites.length < total,
             });
         })
         .catch(() => res.status(500).json({ message: 'Error fetching events' }));
