@@ -32,9 +32,19 @@ const MyBookings = () => {
     const handleCancel = (bookingId) => {
         setCancellingId(bookingId);
         api.delete(`/bookings/${bookingId}`)
-            .then(() => {
-                setBookings((current) => current.filter((booking) => booking._id !== bookingId));
-                toast.success('Booking cancelled.');
+            .then((response) => {
+                // The booking is kept as a 'cancelled' record (refund audit trail),
+                // not removed from the list — merge in the updated fields, same as
+                // the payment handlers below do.
+                setBookings((current) => current.map((b) => (
+                    b._id === bookingId
+                        ? { ...b, ...response.data, event: b.event } // response.data.event is an unpopulated id; keep the populated one already on screen
+                        : b
+                )));
+                const refundRequested = response.data.refundStatus === 'requested';
+                toast.success(refundRequested
+                    ? `Booking cancelled. Refund of ₹${response.data.refundRequestedAmount} requested — you'll be notified once it's reviewed.`
+                    : 'Booking cancelled.');
             })
             .catch(() => toast.error('Could not cancel booking. Please try again.'))
             .finally(() => setCancellingId(null));
@@ -117,15 +127,29 @@ const MyBookings = () => {
                                     <div className="booking-title-row">
                                         <h2>{booking.event?.name || 'Event no longer available'}</h2>
                                         <span className={`booking-status-badge ${
-                                            booking.status === 'waitlisted' ? 'is-waitlisted'
-                                                : booking.status === 'pending_payment' ? 'is-pending-payment'
-                                                    : 'is-confirmed'
+                                            booking.status === 'cancelled' ? 'is-cancelled'
+                                                : booking.status === 'waitlisted' ? 'is-waitlisted'
+                                                    : booking.status === 'pending_payment' ? 'is-pending-payment'
+                                                        : 'is-confirmed'
                                         }`}>
-                                            {booking.status === 'waitlisted' ? 'Waitlisted'
-                                                : booking.status === 'pending_payment' ? 'Payment Pending'
-                                                    : 'Confirmed'}
+                                            {booking.status === 'cancelled' ? 'Cancelled'
+                                                : booking.status === 'waitlisted' ? 'Waitlisted'
+                                                    : booking.status === 'pending_payment' ? 'Payment Pending'
+                                                        : 'Confirmed'}
                                         </span>
-                                        {booking.event?.completed && booking.finalPaymentStatus === 'pending' ? (
+                                        {booking.status === 'cancelled' && booking.refundStatus === 'requested' && (
+                                            <span className="booking-status-badge is-pending-payment">Refund requested (₹{booking.refundRequestedAmount}) — awaiting review</span>
+                                        )}
+                                        {booking.status === 'cancelled' && booking.refundStatus === 'refunded' && (
+                                            <span className="booking-status-badge is-confirmed">Refunded ₹{booking.refundedAmount}</span>
+                                        )}
+                                        {booking.status === 'cancelled' && booking.refundStatus === 'rejected' && (
+                                            <span className="booking-status-badge is-cancelled">Refund declined — contact support</span>
+                                        )}
+                                        {booking.status === 'cancelled' && booking.refundStatus === 'failed' && (
+                                            <span className="booking-status-badge is-pending-payment">Refund approved but failed — contact support</span>
+                                        )}
+                                        {booking.status !== 'cancelled' && booking.event?.completed && booking.finalPaymentStatus === 'pending' ? (
                                             <span className="booking-status-badge is-pending-payment">Awaiting Final Payment</span>
                                         ) : booking.event?.completed && (
                                             <span className="booking-status-badge is-event-completed">Event Completed</span>
@@ -164,7 +188,7 @@ const MyBookings = () => {
                                                 {payingId === booking._id ? 'Processing...' : `Pay Now (₹${booking.advanceAmount})`}
                                             </button>
                                         )}
-                                        {booking.finalPaymentStatus === 'pending' && (
+                                        {booking.status !== 'cancelled' && booking.finalPaymentStatus === 'pending' && (
                                             <button
                                                 className="btn btn-primary btn-sm pay-now-btn"
                                                 onClick={() => handlePayFinal(booking)}
@@ -173,20 +197,22 @@ const MyBookings = () => {
                                                 {payingFinalId === booking._id ? 'Processing...' : `Pay Remaining (₹${booking.finalAmount})`}
                                             </button>
                                         )}
-                                        {(booking.event?.completed || booking.finalPaymentStatus === 'paid') ? (
-                                            booking.finalPaymentStatus !== 'pending' && (
-                                                <Link to={`/events/${booking.event._id}#reviews`} className="btn btn-outline-primary btn-sm">
-                                                    Leave a Review
-                                                </Link>
+                                        {booking.status !== 'cancelled' && (
+                                            (booking.event?.completed || booking.finalPaymentStatus === 'paid') ? (
+                                                booking.finalPaymentStatus !== 'pending' && (
+                                                    <Link to={`/events/${booking.event._id}#reviews`} className="btn btn-outline-primary btn-sm">
+                                                        Leave a Review
+                                                    </Link>
+                                                )
+                                            ) : (
+                                                <button
+                                                    className="btn btn-outline-danger btn-sm cancel-booking-btn"
+                                                    onClick={() => handleCancel(booking._id)}
+                                                    disabled={cancellingId === booking._id}
+                                                >
+                                                    {cancellingId === booking._id ? 'Cancelling...' : 'Cancel Booking'}
+                                                </button>
                                             )
-                                        ) : (
-                                            <button
-                                                className="btn btn-outline-danger btn-sm cancel-booking-btn"
-                                                onClick={() => handleCancel(booking._id)}
-                                                disabled={cancellingId === booking._id}
-                                            >
-                                                {cancellingId === booking._id ? 'Cancelling...' : 'Cancel Booking'}
-                                            </button>
                                         )}
                                     </div>
                                 </div>

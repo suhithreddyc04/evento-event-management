@@ -6,6 +6,7 @@ const FormDataModel = require('../models/FormData');
 const { requireAuth, requireAdmin, requireManager, requireEventAccess } = require('../middleware/auth');
 const upload = require('../config/upload');
 const { activateFinalPayments } = require('../services/bookingLifecycle');
+const { issueRefund } = require('../services/refunds');
 
 const router = express.Router();
 
@@ -135,15 +136,28 @@ router.get('/admin/bookings', requireAuth, requireManager, (req, res) => {
         if (req.query.eventId) filter.event = req.query.eventId;
         else if (ownEventIds) filter.event = { $in: ownEventIds };
 
-        // Default view (no event picked) hides completed events to stay uncluttered,
-        // but picking a specific event — including a completed one — shows all its
-        // bookings, since admins/managers need this to manage final payments after the event.
+        // status=cancelled is its own explicit view — the full cancellation
+        // history (any event, any refund outcome) rather than the "what needs
+        // my attention" default below.
+        if (req.query.status === 'cancelled') filter.status = 'cancelled';
+
+        // Default view (no event picked, no status filter) hides completed events
+        // and already-resolved cancellations to stay uncluttered — but a cancelled
+        // booking with a refund still 'requested' (or one whose approved refund
+        // 'failed') stays visible regardless, since that's exactly what needs an
+        // admin's attention. Picking a specific event shows its full history,
+        // resolved cancellations included.
         return BookingModel.find(filter)
             .sort({ createdAt: -1 })
             .populate('event', 'name capacity completed')
-            .then(bookings => res.status(200).json(bookings.filter(booking =>
-                booking.event && (req.query.eventId || !booking.event.completed)
-            )));
+            .then(bookings => res.status(200).json(bookings.filter(booking => {
+                if (!booking.event) return false;
+                if (req.query.status === 'cancelled') return true;
+                if (req.query.eventId) return true;
+                if (booking.event.completed) return false;
+                if (booking.status !== 'cancelled') return true;
+                return booking.refundStatus === 'requested' || booking.refundStatus === 'failed';
+            })));
     })
         .catch(() => res.status(500).json({ message: 'Error loading bookings' }));
 });
@@ -182,6 +196,52 @@ router.put('/admin/bookings/:id/final-amount', requireAuth, requireManager, requ
         .catch(err => {
             if (err && err.status) return res.status(err.status).json({ message: err.message });
             res.status(500).json({ message: 'Could not update final amount' });
+        });
+});
+
+// A customer cancelling a paid booking only *requests* a refund (see
+// DELETE /bookings/:id) — these two are what actually move the money, or
+// explicitly decline to.
+
+router.post('/admin/bookings/:id/refund/approve', requireAuth, requireManager, requireEventAccess((req) =>
+    BookingModel.findById(req.params.id).then(booking => booking?.event)
+), (req, res) => {
+    BookingModel.findById(req.params.id)
+        .then(booking => {
+            if (!booking) return Promise.reject({ status: 404, message: 'Booking not found' });
+            // 'failed' is included so a refund that was approved but whose Razorpay
+            // call errored (network blip, gateway hiccup) can simply be retried.
+            if (booking.refundStatus !== 'requested' && booking.refundStatus !== 'failed') {
+                return Promise.reject({ status: 400, message: 'No refund is awaiting approval on this booking' });
+            }
+            return issueRefund(booking).then(refundResult => {
+                Object.assign(booking, refundResult);
+                return booking.save();
+            });
+        })
+        .then(saved => res.status(200).json(saved))
+        .catch(err => {
+            if (err && err.status) return res.status(err.status).json({ message: err.message });
+            res.status(500).json({ message: 'Could not process refund' });
+        });
+});
+
+router.post('/admin/bookings/:id/refund/reject', requireAuth, requireManager, requireEventAccess((req) =>
+    BookingModel.findById(req.params.id).then(booking => booking?.event)
+), (req, res) => {
+    BookingModel.findById(req.params.id)
+        .then(booking => {
+            if (!booking) return Promise.reject({ status: 404, message: 'Booking not found' });
+            if (booking.refundStatus !== 'requested') {
+                return Promise.reject({ status: 400, message: 'No refund is awaiting approval on this booking' });
+            }
+            booking.refundStatus = 'rejected';
+            return booking.save();
+        })
+        .then(saved => res.status(200).json(saved))
+        .catch(err => {
+            if (err && err.status) return res.status(err.status).json({ message: err.message });
+            res.status(500).json({ message: 'Could not reject refund' });
         });
 });
 
