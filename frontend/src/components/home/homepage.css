@@ -41,34 +41,28 @@
     text-align: left;
 }
 
-.hero-eyebrow {
-    display: inline-block;
-    padding: 6px 16px;
-    border-radius: 30px;
-    background: rgba(91, 33, 182, 0.1);
-    color: var(--color-primary);
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    margin-bottom: 1.25rem;
+.hero-content .kicker {
+    margin-bottom: 1.5rem;
 }
 
-.hero-content h1 {
-    font-size: 3.1rem;
-    line-height: 1.2;
-    font-weight: 700;
+.hero-headline {
+    font-family: var(--font-heading);
+    font-size: var(--text-display);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.02em;
     color: var(--color-text);
-    margin: 0 0 1.25rem;
+    margin: 0 0 1.5rem;
 }
 
-.hero-content h1 .highlight {
-    color: var(--color-primary);
+.hero-headline em {
     font-style: italic;
+    font-weight: 500;
+    color: var(--color-primary);
 }
 
 .hero-description {
-    font-size: 1.15rem;
+    font-size: var(--text-lede);
     line-height: 1.75;
     color: var(--color-text-muted);
     max-width: 480px;
@@ -146,6 +140,54 @@
        animation instead of two separate transition systems fighting. */
 }
 
+/* ---------- Kinetic marquee strip ---------- */
+.marquee-strip {
+    overflow: hidden;
+    background: linear-gradient(120deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    padding: 1rem 0;
+    margin: 3rem 0;
+    transform: rotate(-1deg);
+}
+
+.marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee-scroll 28s linear infinite;
+}
+
+.marquee-group {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.marquee-group span {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 700;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.95);
+    white-space: nowrap;
+    padding: 0 1.25rem;
+}
+
+.marquee-dot {
+    font-style: normal !important;
+    font-size: 1rem !important;
+    color: var(--color-accent) !important;
+}
+
+@keyframes marquee-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .marquee-track {
+        animation: none;
+    }
+}
+
 /* ---------- Shared section heading ---------- */
 .section-heading {
     text-align: center;
@@ -153,18 +195,12 @@
     margin: 0 auto 2.5rem;
 }
 
-.section-eyebrow {
-    display: inline-block;
-    color: var(--color-accent-dark);
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 8px;
+.section-heading .kicker {
+    margin-bottom: 10px;
 }
 
 .section-heading h2 {
-    font-size: 2rem;
+    font-size: var(--text-h2);
     color: var(--color-text);
     margin: 0;
 }
@@ -183,18 +219,31 @@
 }
 
 .feature-card {
+    position: relative;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     padding: 2rem 1.5rem;
     text-align: center;
     box-shadow: var(--shadow-sm);
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    transition: transform 0.3s var(--ease-editorial), box-shadow 0.3s var(--ease-editorial), border-color 0.3s ease;
 }
 
 .feature-card:hover {
-    transform: translateY(-6px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-lg);
+    border-color: transparent;
+}
+
+.feature-index {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-style: italic;
+    color: var(--color-border);
 }
 
 .feature-icon {
@@ -239,11 +288,15 @@
 .category-preview-card {
     position: relative;
     display: block;
-    height: 260px;
-    border-radius: var(--radius-lg);
+    height: 320px;
+    border-radius: var(--radius-xl);
     overflow: hidden;
     box-shadow: var(--shadow-sm);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.4s var(--ease-editorial), box-shadow 0.4s var(--ease-editorial);
+}
+
+.category-preview-card:nth-child(even) {
+    margin-top: 2.5rem;
 }
 
 .category-preview-card-link {
@@ -308,18 +361,21 @@
 
 /* ---------- CTA banner ---------- */
 .cta-banner {
+    position: relative;
     max-width: 1100px;
     margin: 0 auto 4rem;
-    padding: 3.5rem 2rem;
+    padding: 4.5rem 2rem;
     text-align: center;
     background: linear-gradient(135deg, var(--color-primary) 0%, #7c3aed 45%, var(--color-accent) 130%);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
     color: #fff;
+    overflow: hidden;
 }
 
 .cta-banner h2 {
-    font-size: 2rem;
+    font-size: var(--text-h1);
+    font-weight: 800;
     margin: 0 0 10px;
 }
 
@@ -364,10 +420,6 @@
 
     .hero-actions {
         justify-content: center;
-    }
-
-    .hero-content h1 {
-        font-size: 2.2rem;
     }
 
     .features-grid,

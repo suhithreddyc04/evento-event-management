@@ -34,7 +34,8 @@ const About = () => {
       <Header />
       <div className="about-hero">
         <Reveal className="about-hero-overlay">
-          <h1>About Us</h1>
+          <span className="kicker about-hero-kicker">Our Story</span>
+          <h1>Every celebration deserves a plan this good</h1>
           <p>
             Welcome to <strong>Evento</strong>, your event management platform! We specialize in organizing
             and managing memorable events tailored to your needs. From personal
@@ -51,7 +52,7 @@ const About = () => {
 
       <section className="offer-section">
         <Reveal className="section-heading">
-          <span className="section-eyebrow">What We Offer</span>
+          <span className="kicker">What We Offer</span>
           <h2>An event for every occasion</h2>
         </Reveal>
         <StaggerGroup className="offer-grid">
@@ -69,7 +70,7 @@ const About = () => {
 
       <section className="steps-section">
         <Reveal className="section-heading">
-          <span className="section-eyebrow">How Evento Works</span>
+          <span className="kicker">How Evento Works</span>
           <h2>From browsing to celebrating, in three steps</h2>
         </Reveal>
         <StaggerGroup className="steps-grid">

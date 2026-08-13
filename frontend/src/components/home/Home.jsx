@@ -40,7 +40,7 @@ const Home = () => {
     const { isAuthenticated, isManager } = useAuth();
 
     if (isAuthenticated && isManager) {
-        return <Navigate to="/admin" replace />;
+        return <Navigate to="/admin/events" replace />;
     }
 
     return (
@@ -54,9 +54,9 @@ const Home = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 >
-                    <span className="hero-eyebrow">Event Planning, Perfected</span>
-                    <h1>
-                        Making Every <span className="highlight">Moment</span> Unforgettable
+                    <span className="kicker">Event Planning, Perfected</span>
+                    <h1 className="hero-headline">
+                        Making every <em>moment</em><br />unforgettable
                     </h1>
                     <p className="hero-description">
                         From dream weddings to milestone birthdays and flawless corporate events —
@@ -92,14 +92,32 @@ const Home = () => {
                 </motion.div>
             </section>
 
+            <div className="marquee-strip" aria-hidden="true">
+                <div className="marquee-track">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                        <div className="marquee-group" key={i}>
+                            <span>Weddings</span>
+                            <span className="marquee-dot">✦</span>
+                            <span>Corporate Events</span>
+                            <span className="marquee-dot">✦</span>
+                            <span>Birthdays</span>
+                            <span className="marquee-dot">✦</span>
+                            <span>Reunions</span>
+                            <span className="marquee-dot">✦</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
             <section className="features-section">
                 <Reveal className="section-heading">
-                    <span className="section-eyebrow">Why Evento</span>
+                    <span className="kicker">Why Evento</span>
                     <h2>Everything you need for the perfect event</h2>
                 </Reveal>
                 <StaggerGroup className="features-grid">
-                    {features.map((feature) => (
+                    {features.map((feature, index) => (
                         <StaggerItem key={feature.title} className="feature-card">
+                            <span className="feature-index">{String(index + 1).padStart(2, '0')}</span>
                             <div className="feature-icon">
                                 <i className={`bi ${feature.icon}`}></i>
                             </div>
@@ -112,7 +130,7 @@ const Home = () => {
 
             <section className="categories-preview-section">
                 <Reveal className="section-heading">
-                    <span className="section-eyebrow">Explore</span>
+                    <span className="kicker">Explore</span>
                     <h2>Find your perfect event type</h2>
                 </Reveal>
                 <StaggerGroup className="categories-preview-grid">

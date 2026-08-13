@@ -2,11 +2,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.9rem 2rem;
+    padding: 1.1rem 2.5rem;
     background: linear-gradient(120deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
     width: 100%;
     box-sizing: border-box;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -52,15 +53,21 @@
     object-fit: cover;
     border-radius: 50%;
     border: 2px solid rgba(255, 255, 255, 0.6);
+    transition: transform 0.3s var(--ease-editorial);
+}
+
+.header-logo-link:hover .header-logo {
+    transform: rotate(-8deg) scale(1.05);
 }
 
 .header-title {
     font-family: var(--font-heading);
-    font-size: 1.6rem;
-    font-weight: 700;
+    font-size: 1.7rem;
+    font-weight: 800;
+    font-style: italic;
     color: #fff;
     margin-left: 0.75rem;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
 }
 
 .header-right {
@@ -72,8 +79,9 @@
 .header-link {
     text-decoration: none;
     color: rgba(255, 255, 255, 0.88);
-    font-size: 0.95rem;
-    font-weight: 500;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
     position: relative;
     padding-bottom: 2px;
     transition: color 0.2s ease;

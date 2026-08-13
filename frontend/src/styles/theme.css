@@ -16,9 +16,22 @@
 
     --radius-md: 12px;
     --radius-lg: 18px;
+    --radius-xl: 28px;
     --shadow-sm: 0 2px 8px rgba(91, 33, 182, 0.10);
     --shadow-md: 0 8px 24px rgba(91, 33, 182, 0.16);
     --shadow-lg: 0 16px 40px rgba(91, 33, 182, 0.24);
+    --shadow-xl: 0 28px 70px rgba(91, 33, 182, 0.28);
+
+    /* Fluid editorial type scale — grows with viewport instead of jumping at
+       breakpoints, so the same oversized-headline feel holds from a phone up
+       to a wide desktop without a pile of per-breakpoint font-size rules. */
+    --text-display: clamp(2.75rem, 2rem + 3.2vw, 5.5rem);
+    --text-h1: clamp(2.25rem, 1.7rem + 2.2vw, 3.75rem);
+    --text-h2: clamp(1.75rem, 1.45rem + 1.2vw, 2.6rem);
+    --text-h3: clamp(1.2rem, 1.08rem + 0.5vw, 1.5rem);
+    --text-lede: clamp(1.05rem, 0.98rem + 0.3vw, 1.3rem);
+
+    --ease-editorial: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :root[data-theme="dark"] {
@@ -36,6 +49,7 @@
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
     --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
     --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+    --shadow-xl: 0 28px 70px rgba(0, 0, 0, 0.6);
 }
 
 * {
@@ -60,11 +74,116 @@ html, body {
 
 h1, h2, h3 {
     font-family: var(--font-heading);
+    letter-spacing: -0.01em;
+    line-height: 1.1;
 }
 
 a {
     color: var(--color-primary);
     transition: color 0.2s ease;
+}
+
+/* A deliberate, on-brand text selection instead of the browser default —
+   one of those small details that makes a site feel considered. */
+::selection {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+/* Keyboard focus gets a clear, on-brand ring; mouse/touch clicks don't —
+   accessible without the visual noise of :focus on every click. */
+:focus-visible {
+    outline: 2px solid var(--color-primary-light);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
+/* Slim, on-brand scrollbar (Firefox + WebKit) instead of the OS default. */
+html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-primary-light) transparent;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-primary-light);
+    border-radius: 10px;
+    border: 2px solid var(--color-bg);
+}
+
+/* ---------- Editorial type utilities ----------
+   Shared by every "hero" moment across the site (Home, About, section
+   intros) so the oversized-headline, small-caps-eyebrow language reads as
+   one consistent system rather than being reinvented per page. */
+.kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-accent-dark);
+}
+
+.kicker::before {
+    content: '';
+    width: 28px;
+    height: 1.5px;
+    background: currentColor;
+    display: inline-block;
+}
+
+.text-display {
+    font-family: var(--font-heading);
+    font-size: var(--text-display);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.text-display em {
+    font-style: italic;
+    font-weight: 500;
+    color: var(--color-primary);
+}
+
+/* Animated underline-on-hover for inline text links that aren't already
+   styled as buttons/nav items — draws the underline in from the left
+   instead of Bootstrap's flat default. */
+.link-underline {
+    position: relative;
+    color: var(--color-text);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.link-underline::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 100%;
+    height: 1.5px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.3s var(--ease-editorial);
+}
+
+.link-underline:hover::after,
+.link-underline:focus-visible::after {
+    transform: scaleX(1);
+    transform-origin: left;
 }
 
 /* Respect users who've asked their OS for reduced motion — large-scale

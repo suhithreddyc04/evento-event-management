@@ -4,6 +4,11 @@ import './Footer.css';
 export default function Footer() {
     return (
         <footer className="footer-container">
+            <div className="footer-cta">
+                <Link to="/events" className="footer-cta-line">
+                    Let&rsquo;s plan something <em>unforgettable</em> <i className="bi bi-arrow-up-right"></i>
+                </Link>
+            </div>
             <div className="footer-content">
                 <div className="footer-brand">
                     <div className="footer-brand-title">

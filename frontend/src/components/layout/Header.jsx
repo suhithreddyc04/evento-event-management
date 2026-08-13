@@ -12,7 +12,7 @@ const Header = () => {
     const { theme, toggleTheme } = useTheme();
     const [profileOpen, setProfileOpen] = useState(false);
     const profileRef = useRef(null);
-    const landingPath = isManager ? '/admin' : '/home';
+    const landingPath = isManager ? '/admin/events' : '/home';
     const isHome = location.pathname === landingPath;
 
     const handleBackClick = () => {
@@ -71,7 +71,7 @@ const Header = () => {
 
                 {isAuthenticated && isManager ? (
                     <>
-                        <Link to="/admin" className="header-link">{isAdmin ? 'Admin' : 'Manage Events'}</Link>
+                        <Link to="/admin/events" className="header-link">{isAdmin ? 'Admin' : 'Manage Events'}</Link>
                         <button className="header-button" onClick={handleLogOutClick}>Log Out</button>
                     </>
                 ) : isAuthenticated ? (
