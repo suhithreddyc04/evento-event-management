@@ -143,6 +143,9 @@ const MyBookings = () => {
                                         {booking.status === 'cancelled' && booking.refundStatus === 'refunded' && (
                                             <span className="booking-status-badge is-confirmed">Refunded ₹{booking.refundedAmount}</span>
                                         )}
+                                        {booking.status === 'cancelled' && booking.refundStatus === 'partial' && (
+                                            <span className="booking-status-badge is-pending-payment">Refunded ₹{booking.refundedAmount} of ₹{booking.refundRequestedAmount} — rest is still under review</span>
+                                        )}
                                         {booking.status === 'cancelled' && booking.refundStatus === 'rejected' && (
                                             <span className="booking-status-badge is-cancelled">Refund declined — contact support</span>
                                         )}
