@@ -29,9 +29,12 @@ const BookingSchema = new mongoose.Schema({
     // 'requested' = money was paid and cancellation is asking for it back, but
     // the actual Razorpay refund call is held until an admin/manager approves
     // it (see PUT /admin/bookings/:id/refund) — cancelling never moves money
-    // on its own. 'rejected' = an admin declined the request. 'failed' surfaces
-    // an approved refund whose Razorpay call didn't go through, for follow-up.
-    refundStatus: { type: String, enum: ['not_applicable', 'requested', 'refunded', 'rejected', 'failed'], default: 'not_applicable' },
+    // on its own. 'rejected' = an admin declined the request (or the remainder
+    // of one already partially refunded). 'failed' surfaces an approved refund
+    // whose Razorpay call didn't go through, for follow-up. 'partial' = the
+    // admin chose to refund only the advance or only the final balance, and
+    // the other portion is still outstanding.
+    refundStatus: { type: String, enum: ['not_applicable', 'requested', 'partial', 'refunded', 'rejected', 'failed'], default: 'not_applicable' },
     refundId: { type: String, default: null }, // Razorpay refund id(s), comma-separated if both advance and final were refunded
     refundedAmount: { type: Number, default: null },
     refundedAt: { type: Date, default: null },
@@ -39,6 +42,10 @@ const BookingSchema = new mongoose.Schema({
     // so the admin approval screen doesn't need to re-derive it from
     // advanceAmount/finalAmount (which could theoretically change later).
     refundRequestedAmount: { type: Number, default: null },
+    // Per-portion tracking so a partial refund (e.g. advance only) doesn't get
+    // re-offered or re-charged once the admin later approves the remainder.
+    advanceRefunded: { type: Boolean, default: false },
+    finalRefunded: { type: Boolean, default: false },
 });
 
 // DB-level backstop against the "book the same event twice" race: two concurrent

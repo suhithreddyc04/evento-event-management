@@ -61,18 +61,29 @@ const AdminBookings = () => {
             .finally(() => setSavingId(null));
     };
 
-    const handleRefundAction = (bookingId, action) => {
+    // `scope` is only meaningful for 'approve' — 'advance' or 'final' refunds
+    // just that one payment, 'full' (the default) refunds whatever's left.
+    const handleRefundAction = (bookingId, action, scope = 'full') => {
         setRefundActionId(bookingId);
-        api.post(`/admin/bookings/${bookingId}/refund/${action}`)
+        api.post(`/admin/bookings/${bookingId}/refund/${action}`, action === 'approve' ? { scope } : undefined)
             .then(({ data: updated }) => {
                 setBookings((current) => current.map((b) => (
                     b._id === bookingId
-                        ? { ...b, refundStatus: updated.refundStatus, refundedAmount: updated.refundedAmount, refundId: updated.refundId }
+                        ? {
+                            ...b,
+                            refundStatus: updated.refundStatus,
+                            refundedAmount: updated.refundedAmount,
+                            refundId: updated.refundId,
+                            advanceRefunded: updated.advanceRefunded,
+                            finalRefunded: updated.finalRefunded,
+                        }
                         : b
                 )));
                 toast.success(
                     action === 'approve'
-                        ? (updated.refundStatus === 'refunded' ? `Refunded ₹${updated.refundedAmount}.` : 'Refund approved, but the Razorpay call failed — check the Razorpay dashboard.')
+                        ? (updated.refundStatus === 'refunded' ? `Refunded ₹${updated.refundedAmount}.`
+                            : updated.refundStatus === 'partial' ? `Refunded ₹${updated.refundedAmount} so far — the rest is still available to approve.`
+                                : 'Refund approved, but the Razorpay call failed — check the Razorpay dashboard.')
                         : 'Refund request declined.'
                 );
             })
@@ -172,29 +183,72 @@ const AdminBookings = () => {
                                     </td>
                                     <td>
                                         {booking.refundStatus === 'not_applicable' ? '—'
-                                            : (booking.refundStatus === 'requested' || booking.refundStatus === 'failed') ? (
+                                            : ['requested', 'partial', 'failed'].includes(booking.refundStatus) ? (
                                                 <div className="admin-refund-actions">
                                                     <span className={`admin-status-badge ${booking.refundStatus === 'failed' ? 'is-cancelled' : 'is-upcoming'}`}>
-                                                        {booking.refundStatus === 'failed' ? 'Refund failed' : `Requested ₹${booking.refundRequestedAmount}`}
+                                                        {booking.refundStatus === 'failed' ? 'Refund failed'
+                                                            : booking.refundStatus === 'partial' ? `Partial ₹${booking.refundedAmount} of ₹${booking.refundRequestedAmount}`
+                                                                : `Requested ₹${booking.refundRequestedAmount}`}
                                                     </span>
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-outline-primary btn-sm"
-                                                        onClick={() => handleRefundAction(booking._id, 'approve')}
-                                                        disabled={refundActionId === booking._id}
-                                                    >
-                                                        {refundActionId === booking._id ? '...' : booking.refundStatus === 'failed' ? 'Retry' : 'Approve'}
-                                                    </button>
-                                                    {booking.refundStatus === 'requested' && (
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-outline-danger btn-sm"
-                                                            onClick={() => handleRefundAction(booking._id, 'reject')}
-                                                            disabled={refundActionId === booking._id}
-                                                        >
-                                                            Reject
-                                                        </button>
-                                                    )}
+                                                    {(() => {
+                                                        // Only offer a scope button while that portion is still owed —
+                                                        // once it's refunded, advanceRefunded/finalRefunded hides it.
+                                                        const advanceLeft = booking.advanceAmount != null && !booking.advanceRefunded;
+                                                        const finalLeft = booking.finalPaymentStatus === 'paid' && !booking.finalRefunded;
+                                                        const busy = refundActionId === booking._id;
+                                                        return (
+                                                            <>
+                                                                {advanceLeft && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-outline-primary btn-sm"
+                                                                        onClick={() => handleRefundAction(booking._id, 'approve', 'advance')}
+                                                                        disabled={busy}
+                                                                    >
+                                                                        {busy ? '...' : 'Advance Only'}
+                                                                    </button>
+                                                                )}
+                                                                {finalLeft && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-outline-primary btn-sm"
+                                                                        onClick={() => handleRefundAction(booking._id, 'approve', 'final')}
+                                                                        disabled={busy}
+                                                                    >
+                                                                        {busy ? '...' : 'Remaining Only'}
+                                                                    </button>
+                                                                )}
+                                                                {advanceLeft && finalLeft && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-primary btn-sm"
+                                                                        onClick={() => handleRefundAction(booking._id, 'approve', 'full')}
+                                                                        disabled={busy}
+                                                                    >
+                                                                        {busy ? '...' : 'Full Refund'}
+                                                                    </button>
+                                                                )}
+                                                                {!advanceLeft && !finalLeft && booking.refundStatus === 'failed' && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-outline-primary btn-sm"
+                                                                        onClick={() => handleRefundAction(booking._id, 'approve', 'full')}
+                                                                        disabled={busy}
+                                                                    >
+                                                                        {busy ? '...' : 'Retry'}
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-outline-danger btn-sm"
+                                                                    onClick={() => handleRefundAction(booking._id, 'reject')}
+                                                                    disabled={busy}
+                                                                >
+                                                                    Reject
+                                                                </button>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </div>
                                             ) : booking.refundStatus === 'refunded' ? (
                                                 <span className="admin-status-badge is-completed">Refunded ₹{booking.refundedAmount}</span>

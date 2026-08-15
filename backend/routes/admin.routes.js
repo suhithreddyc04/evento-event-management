@@ -143,10 +143,10 @@ router.get('/admin/bookings', requireAuth, requireManager, (req, res) => {
 
         // Default view (no event picked, no status filter) hides completed events
         // and already-resolved cancellations to stay uncluttered — but a cancelled
-        // booking with a refund still 'requested' (or one whose approved refund
-        // 'failed') stays visible regardless, since that's exactly what needs an
-        // admin's attention. Picking a specific event shows its full history,
-        // resolved cancellations included.
+        // booking with a refund still 'requested', 'partial' (only one portion
+        // approved so far), or 'failed' stays visible regardless, since that's
+        // exactly what needs an admin's attention. Picking a specific event shows
+        // its full history, resolved cancellations included.
         return BookingModel.find(filter)
             .sort({ createdAt: -1 })
             .populate('event', 'name capacity completed')
@@ -156,7 +156,7 @@ router.get('/admin/bookings', requireAuth, requireManager, (req, res) => {
                 if (req.query.eventId) return true;
                 if (booking.event.completed) return false;
                 if (booking.status !== 'cancelled') return true;
-                return booking.refundStatus === 'requested' || booking.refundStatus === 'failed';
+                return ['requested', 'partial', 'failed'].includes(booking.refundStatus);
             })));
     })
         .catch(() => res.status(500).json({ message: 'Error loading bookings' }));
@@ -206,15 +206,23 @@ router.put('/admin/bookings/:id/final-amount', requireAuth, requireManager, requ
 router.post('/admin/bookings/:id/refund/approve', requireAuth, requireManager, requireEventAccess((req) =>
     BookingModel.findById(req.params.id).then(booking => booking?.event)
 ), (req, res) => {
+    // 'advance' or 'final' refunds just that one payment; anything else (or
+    // omitted) refunds whatever is still owed, i.e. both if neither has been
+    // sent back yet.
+    const scope = ['advance', 'final'].includes(req.body?.scope) ? req.body.scope : 'full';
+
     BookingModel.findById(req.params.id)
         .then(booking => {
             if (!booking) return Promise.reject({ status: 404, message: 'Booking not found' });
-            // 'failed' is included so a refund that was approved but whose Razorpay
-            // call errored (network blip, gateway hiccup) can simply be retried.
-            if (booking.refundStatus !== 'requested' && booking.refundStatus !== 'failed') {
+            // 'failed'/'partial' are included so a refund that errored, or one
+            // where only one portion was approved so far, can be retried/continued.
+            if (!['requested', 'partial', 'failed'].includes(booking.refundStatus)) {
                 return Promise.reject({ status: 400, message: 'No refund is awaiting approval on this booking' });
             }
-            return issueRefund(booking).then(refundResult => {
+            return issueRefund(booking, scope).then(refundResult => {
+                if (Object.keys(refundResult).length === 0) {
+                    return Promise.reject({ status: 400, message: 'Nothing left to refund for that selection' });
+                }
                 Object.assign(booking, refundResult);
                 return booking.save();
             });
@@ -232,7 +240,9 @@ router.post('/admin/bookings/:id/refund/reject', requireAuth, requireManager, re
     BookingModel.findById(req.params.id)
         .then(booking => {
             if (!booking) return Promise.reject({ status: 404, message: 'Booking not found' });
-            if (booking.refundStatus !== 'requested') {
+            // Declines whatever hasn't been refunded yet — including the leftover
+            // portion of a 'partial' refund, or a still-failing 'failed' one.
+            if (!['requested', 'partial', 'failed'].includes(booking.refundStatus)) {
                 return Promise.reject({ status: 400, message: 'No refund is awaiting approval on this booking' });
             }
             booking.refundStatus = 'rejected';
