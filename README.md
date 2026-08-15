@@ -170,6 +170,149 @@ All routes are relative to the backend base URL. Routes marked 🔒 require a JW
 
 </details>
 
+## Database Schema
+
+MongoDB, 4 collections linked by ObjectId references (no embedding except `favorites`).
+
+```
+User.favorites  ──[array of IDs]──>  Event
+Booking.user    ────────────────>  User
+Booking.event   ────────────────>  Event
+Review.user     ────────────────>  User
+Review.event    ────────────────>  Event
+Event.manager   ────────────────>  User
+```
+
+<details>
+<summary>User — collection <code>log_reg_form</code> (model: <code>FormData.js</code>)</summary>
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | ObjectId | Primary key |
+| `name` | String | Display name |
+| `email` | String | Login identity |
+| `password` | String | Hashed password (unused for Google sign-in) |
+| `googleId` | String | Set if the account signed up via Google OAuth |
+| `avatarUrl` | String | Profile picture URL |
+| `isAdmin` | Boolean | Platform-wide admin flag, synced from `ADMIN_EMAILS` on every login |
+| `role` | enum: `client`, `manager` | Event-scoped manager role (no platform-wide access; `isAdmin` always outranks) |
+| `favorites` | [ObjectId → Event] | Favorited event IDs |
+| `resetPasswordToken` | String | Password-reset flow |
+| `resetPasswordExpires` | Date | Password-reset token expiry |
+
+</details>
+
+<details>
+<summary>Event</summary>
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | ObjectId | Primary key |
+| `name` | String (required) | Event title |
+| `description` | String (required) | Full description |
+| `imageUrl` | String (required) | Cover image |
+| `category` | String (required, indexed) | Used for filtering |
+| `location` | String | Venue/location |
+| `details` / `activities` / `decorations` / `games` | String | Category-specific copy |
+| `capacity` | Number \| null | Max bookings; `null` = unlimited |
+| `price` | Number \| null | Total price; `null` = "contact for pricing" |
+| `advanceAmount` | Number \| null | Deposit required to book; `null` = no advance needed |
+| `completed` | Boolean | Marks event as over — gates reviews, triggers final payments |
+| `manager` | ObjectId → User \| null | Manager assigned to run this event |
+| `avgRating` | Number \| null | Cached average review rating |
+| `reviewCount` | Number | Cached review count |
+| `bookedCount` | Number | Cached confirmed-booking count |
+
+Cached aggregates (`avgRating`, `reviewCount`, `bookedCount`) are kept in sync by `services/eventStats.js` whenever a Review or Booking changes, so the events **list** endpoint can read them directly instead of aggregating per event on every request. The single-event endpoint still recomputes fresh since it's only ever one document.
+
+</details>
+
+<details>
+<summary>Booking</summary>
+
+**Who booked what**
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | ObjectId | Primary key |
+| `event` | ObjectId → Event | Which event |
+| `user` | ObjectId → User | Who booked |
+| `name`, `email`, `phone`, `address` | String | Contact info snapshot at booking time |
+| `date` | Date | Requested event date |
+| `details` | Mixed | Category-specific answers (e.g. guest count, venue preference) |
+| `specialRequests` | String | Free-text notes |
+| `createdAt` | Date | Booking timestamp — also drives waitlist FIFO order |
+
+**Status**
+
+| Field | Type | Description |
+|---|---|---|
+| `status` | enum: `confirmed`, `pending_payment`, `waitlisted`, `cancelled` | Drives the whole booking lifecycle |
+
+**Advance payment** (paid at booking time)
+
+| Field | Type | Description |
+|---|---|---|
+| `advanceAmount` | Number \| null | Deposit owed, snapshotted from the event at booking time |
+| `razorpayOrderId` | String | Razorpay order created for the advance |
+| `razorpayPaymentId` | String | Razorpay payment ID once paid |
+
+**Final payment** (owed once the event completes)
+
+| Field | Type | Description |
+|---|---|---|
+| `finalAmount` | Number \| null | Remaining balance = event price − advance |
+| `finalPaymentStatus` | enum: `not_required`, `pending`, `paid` | Whether the balance is due yet |
+| `finalRazorpayOrderId` | String | Razorpay order for the final balance |
+| `finalRazorpayPaymentId` | String | Razorpay payment ID once paid |
+
+**Cancellation & refund**
+
+| Field | Type | Description |
+|---|---|---|
+| `cancelledAt` | Date \| null | When it was cancelled |
+| `refundStatus` | enum: `not_applicable`, `requested`, `partial`, `refunded`, `rejected`, `failed` | Refund state |
+| `refundRequestedAmount` | Number \| null | Amount owed, computed at cancel time |
+| `refundedAmount` | Number \| null | Actual total refunded so far |
+| `refundId` | String | Razorpay refund ID(s), comma-joined if both portions were refunded |
+| `refundedAt` | Date \| null | Timestamp of the last refund action |
+| `advanceRefunded` | Boolean | Has the advance portion specifically been refunded? |
+| `finalRefunded` | Boolean | Has the final portion specifically been refunded? |
+
+**Misc**
+
+| Field | Type | Description |
+|---|---|---|
+| `reminderSent` | Boolean | Stops the reminder-email job from sending duplicates |
+
+</details>
+
+<details>
+<summary>Review</summary>
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | ObjectId | Primary key |
+| `event` | ObjectId → Event | Which event |
+| `user` | ObjectId → User | Who wrote it |
+| `name` | String (required) | Reviewer's display name |
+| `rating` | Number, 1–5 (required) | Star rating |
+| `comment` | String | Review text |
+| `createdAt` | Date | Timestamp |
+| `flagged` | Boolean | Admin moderation flag |
+| `adminReply.text` | String | Admin's reply text |
+| `adminReply.repliedAt` | Date \| null | When admin replied |
+
+</details>
+
+**Indexes worth knowing (constraints, not just lookup speed):**
+
+| Collection | Index | Type | Purpose |
+|---|---|---|---|
+| `Event` | `category` | Regular | Every events-list request filters by category |
+| `Booking` | `event + user` | Unique, partial (excludes `cancelled`) | One active booking per user per event; re-booking after cancel is allowed |
+| `Review` | `event + user` | Unique | One review per user per event — resubmitting edits instead of duplicating |
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
